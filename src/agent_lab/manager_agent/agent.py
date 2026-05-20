@@ -16,5 +16,5 @@ root_agent = Agent(
     """,
     # This automatically wires up the dice agent so the manager can call it like a tool,
     # while preserving conversation history and session state perfectly.
-    sub_agents=[dice_agent], 
+    sub_agents=[dice_agent],
 )

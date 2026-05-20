@@ -27,5 +27,5 @@ def check_prime(numbers: list[int]) -> dict[str, list[int]]:
                 break
         if is_prime:
             primes.append(number)
-            
+
     return {"primes_found": primes}
