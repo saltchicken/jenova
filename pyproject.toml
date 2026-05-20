@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent_lab"
+version = "0.1.0"
+description = "A simple LLM agent for rolling dice and checking primes."
+requires-python = ">=3.10"
+dependencies = [
+    "google-adk[extensions]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
