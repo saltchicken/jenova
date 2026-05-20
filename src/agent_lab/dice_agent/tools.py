@@ -13,16 +13,9 @@ def roll_die(sides: int) -> int:
     return random.randint(1, sides)
 
 
-def check_prime(numbers: list[int]) -> str:
-    """Check if a given list of numbers are prime.
-
-  Args:
-    numbers: The list of numbers to check.
-
-  Returns:
-    A str indicating which number is prime.
-  """
-    primes = set()
+def check_prime(numbers: list[int]) -> dict[str, list[int]]:
+    """Check if a given list of numbers are prime."""
+    primes = []
     for number in numbers:
         number = int(number)
         if number <= 1:
@@ -33,6 +26,6 @@ def check_prime(numbers: list[int]) -> str:
                 is_prime = False
                 break
         if is_prime:
-            primes.add(number)
-    return ("No prime numbers found." if not primes else
-            f"{', '.join(str(num) for num in primes)} are prime numbers.")
+            primes.append(number)
+            
+    return {"primes_found": primes}
