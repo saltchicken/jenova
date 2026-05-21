@@ -5,7 +5,7 @@ from google.adk.tools.function_tool import FunctionTool
 from .tools import add_numbers
 from .tools import multiply_numbers
 
-root_agent = Agent(
+agent = Agent(
     model=LiteLlm(model="ollama_chat/devstral-small-2"),
     name="calculator_agent",
     description="An agent that performs basic math operations like addition and multiplication.",

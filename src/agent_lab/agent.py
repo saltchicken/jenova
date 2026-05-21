@@ -1,8 +1,8 @@
 from google.adk.agents.llm_agent import Agent
 from google.adk.models.lite_llm import LiteLlm
 
-from agent_lab.dice_agent.agent import root_agent as dice_agent
-from agent_lab.calculator_agent.agent import root_agent as calculator_agent
+from agent_lab.sub_agents.dice.agent import agent as dice_agent
+from agent_lab.sub_agents.calculator.agent import agent as calculator_agent
 
 # The framework natively registers this agent as a tool for the manager.
 # You don't need a custom function wrapper!

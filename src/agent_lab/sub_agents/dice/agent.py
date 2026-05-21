@@ -5,7 +5,7 @@ from google.adk.tools.function_tool import FunctionTool
 from .tools import check_prime
 from .tools import roll_die
 
-root_agent = Agent(
+agent = Agent(
     model=LiteLlm(model="ollama_chat/devstral-small-2"),
     name="dice_roll_agent",
     description=(
