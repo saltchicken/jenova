@@ -35,9 +35,20 @@ code_refactorer = Agent(
     """
 )
 
+code_output_formatter = Agent(
+    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    name="code_output_formatter_agent",
+    description="Takes the final refactored code and outputs it in the proper format",
+    instruction="""
+    You are a code output formatter. Take the final refactored code and output only the code.
+    Do not include any explanation or anything else.
+    """
+)
+
+
 # 4. Define the Sequential Pipeline
 agent = SequentialAgent(
     name="coder_agent",
     description="Executes a sequence of code writing, reviewing, and refactoring.",
-    sub_agents=[code_writer, code_reviewer, code_refactorer]
+    sub_agents=[code_writer, code_reviewer, code_refactorer, code_output_formatter]
 )
