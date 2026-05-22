@@ -37,8 +37,17 @@ def route_on_intent(intent: IntentCategory):
     yield Event(route=intent.intent)
 
 
-# 3. Account workflow makes sense here (requires auth/PIN)
+# 3. Account workflow with authentication state checking
+def check_auth_status(is_authenticated: bool = False):
+    """Check if the user is already authenticated in the workflow state."""
+    if is_authenticated:
+        yield Event(route="already_authenticated")
+    else:
+        yield Event(route="needs_auth")
+
+
 def collect_pin():
+    """Ask the user for their PIN if not authenticated."""
     yield RequestInput(
         message="I can help with your account. Please provide your 6-digit account PIN:",
         response_schema=int
@@ -46,13 +55,34 @@ def collect_pin():
 
 
 def process_account(node_input: int):
+    """Process the provided PIN and update the authenticated state."""
     # node_input automatically captures the response from collect_pin
-    return f"Successfully authenticated with PIN: {node_input}. Retrieving account details..."
+    return Event(
+        state={"is_authenticated": True},
+        message=f"Successfully authenticated with PIN: {node_input}. Retrieving account details..."
+    )
+
+
+def handle_already_authenticated():
+    """Handle the case where the user is already authenticated."""
+    return Event(
+        message="You are already authenticated. Accessing your account details..."
+    )
 
 
 account_workflow = Workflow(
     name="account_management",
-    edges=[('START', collect_pin, process_account)]
+    edges=[
+        ('START', check_auth_status),
+        (
+            check_auth_status,
+            {
+                "needs_auth": collect_pin,
+                "already_authenticated": handle_already_authenticated,
+            },
+        ),
+        (collect_pin, process_account),
+    ],
 )
 
 
