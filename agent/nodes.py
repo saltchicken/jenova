@@ -36,5 +36,5 @@ answer_question = Agent(
 
 def handle_other():
     yield Event(
-        message="I am a customer support bot. I can help you manage your account or answer general questions."
+        message="I am an ai assistant. I can answer your questions or take actions for you."
     )
