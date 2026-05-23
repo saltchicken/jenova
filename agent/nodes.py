@@ -31,7 +31,11 @@ take_action = Agent(
 answer_question = Agent(
     model=LiteLlm(model="ollama_chat/devstral-small-2"),
     name="answer_question",
-    instruction="Please answer the following user question clearly and concisely: {input}",
+    instruction=(
+        "You are a helpful assistant. Here is the conversation history so far:\n"
+        "{history?}\n\n"
+        "Based on the history, please answer the latest user question clearly: {input}"
+    ),
 )
 
 def handle_other():
