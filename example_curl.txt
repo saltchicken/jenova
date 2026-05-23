@@ -16,7 +16,10 @@ curl -N -X POST http://localhost:8000/run_sse \
         -H "Content-Type: application/json" \
         -d '{
       "app_name": "agent",
-      "node_input": "Turn on the living room lights",
+      "newMessage": {
+            "role": "user",
+            "parts": [{"text": "My name is John"}]
+      },
       "userId": "test_user",
       "sessionId": "session_2",
       "streaming": true

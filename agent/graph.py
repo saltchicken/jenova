@@ -8,12 +8,12 @@ from agent.nodes import (
     handle_other,
 )
 
-def process_input(input: str, ctx: Context):
+def process_input(node_input: str, ctx: Context):
     history = ctx.state.get("history", [])
 
-    history.append({"role": "user", "content": input})
+    history.append({"role": "user", "content": node_input})
 
-    return Event(state={"input": input, "history": history})
+    return Event(state={"input": node_input, "history": history})
 
 def route_on_intent(intent: IntentCategory):
     """Yields an Event with a specific route based on the classification."""
