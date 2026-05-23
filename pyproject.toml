@@ -9,9 +9,13 @@ description = "The Jenova agent"
 requires-python = ">=3.10"
 dependencies = [
     "google-adk[extensions]",
+    "asyncpg",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
+]
+server = [
+    "uvicorn",
 ]

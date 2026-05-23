@@ -1,0 +1,40 @@
+from typing import Literal
+from pydantic import BaseModel
+from google.adk import Agent, Event
+from google.adk.models.lite_llm import LiteLlm
+
+from agent.tools.lights import turn_on_lights, turn_off_lights
+
+class IntentCategory(BaseModel):
+    intent: Literal["action", "question", "other"]
+
+classify_intent = Agent(
+    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    name="classify_intent",
+    instruction=(
+        "You are a routing assistant. Based on the input, decide the intent: {input}\n"
+        "- Choose 'action' if they requesting for you to take an action.\n"
+        "- Choose 'question' if they are asking a question.\n"
+        "- Choose 'other' for anything else."
+    ),
+    output_schema=IntentCategory,
+    output_key="intent",
+)
+
+take_action = Agent(
+    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    name="take_action",
+    instruction="Figure out what the user wants you to do and take that action based on this input: {input}",
+    tools=[turn_on_lights, turn_off_lights]
+)
+
+answer_question = Agent(
+    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    name="answer_question",
+    instruction="Please answer the following user question clearly and concisely: {input}",
+)
+
+def handle_other():
+    yield Event(
+        message="I am a customer support bot. I can help you manage your account or answer general questions."
+    )
