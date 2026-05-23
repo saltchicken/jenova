@@ -7,20 +7,28 @@ APP_NAME = "agent"
 USER_ID = "test_user"
 
 
-def get_sessions():
-    url = f"http://localhost:8000/apps/{APP_NAME}/users/{USER_ID}/sessions"
+class SessionManager:
 
-    try:
-        response = httpx.get(url)
-        response.raise_for_status()  # Raises an exception for 4xx/5xx errors
-        sessions = response.json()
-        return sessions
-    except httpx.HTTPError as e:
-        print(f"Error fetching sessions: {e}")
-        return []
-    except json.JSONDecodeError:
-        print("Error parsing response JSON")
-        return []
+    def __init__(self, base_url="http://localhost:8000"):
+        self.base_url = base_url
+        self.prefix = f"{self.base_url}/apps/{APP_NAME}/users/{USER_ID}/sessions"
+
+    def list(self):
+        return httpx.get(self.prefix).json()
+
+    def get(self, session_id):
+        return httpx.get(f"{self.prefix}/{session_id}").json()
+
+    def create(self, session_id=None, data=None):
+        # Uses POST /sessions if no ID, or POST /sessions/{id} if ID provided
+        url = f"{self.prefix}/{session_id}" if session_id else self.prefix
+        return httpx.post(url, json=data or {}).json()
+
+    def update(self, session_id, data):
+        return httpx.patch(f"{self.prefix}/{session_id}", json=data).json()
+
+    def delete(self, session_id):
+        return httpx.delete(f"{self.prefix}/{session_id}").json()
 
 
 def chat(user_input: str, is_blocking: bool):
@@ -84,15 +92,32 @@ def chat(user_input: str, is_blocking: bool):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Chat with Jenova AI Assistant")
-    parser.add_argument("prompt", type=str, help="The message to send")
 
-    # Add an optional flag to switch to blocking mode
+    # Adding sub-commands or flags for session management is recommended
+    # to keep the CLI clean, but for now we'll integrate the manager:
+    parser.add_argument("prompt",
+                        type=str,
+                        nargs='?',
+                        help="The message to send")
     parser.add_argument("--blocking",
                         action="store_true",
                         default=False,
                         help="Use blocking /run instead of streaming /run_sse")
+    parser.add_argument("--list-sessions",
+                        action="store_true",
+                        help="List all active sessions")
 
     args = parser.parse_args()
 
-    print("Available sessions:", get_sessions())
-    chat(args.prompt, args.blocking)
+    # 1. Initialize the manager
+    manager = SessionManager()
+
+    # 2. Use the manager to list sessions if requested
+    if args.list_sessions:
+        print("Available sessions:", manager.list())
+
+    # 3. Only run chat if a prompt was provided
+    if args.prompt:
+        chat(args.prompt, args.blocking)
+    else:
+        print("No prompt provided. Use --list-sessions to see sessions.")
