@@ -1,12 +1,13 @@
-from google.adk import Event, Workflow, Context
+from google.adk import Context
+from google.adk import Event
+from google.adk import Workflow
 
-from agent.nodes import (
-    IntentCategory,
-    classify_intent,
-    take_action,
-    answer_question,
-    handle_other,
-)
+from agent.nodes import answer_question
+from agent.nodes import classify_intent
+from agent.nodes import handle_other
+from agent.nodes import IntentCategory
+from agent.nodes import take_action
+
 
 def process_input(node_input: str, ctx: Context):
     history = ctx.state.get("history", [])
@@ -15,9 +16,11 @@ def process_input(node_input: str, ctx: Context):
 
     return Event(state={"input": node_input, "history": history})
 
+
 def route_on_intent(intent: IntentCategory):
     """Yields an Event with a specific route based on the classification."""
     yield Event(route=intent.intent)
+
 
 root_agent = Workflow(
     name="ai_assistant",
