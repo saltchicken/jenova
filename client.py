@@ -2,14 +2,33 @@ import json
 import httpx
 import argparse
 
+APP_NAME = "agent"
+USER_ID = "test_user"
+
+def get_sessions():
+    url = f"http://localhost:8000/apps/{APP_NAME}/users/{USER_ID}/sessions"
+
+    try:
+        response = httpx.get(url)
+        response.raise_for_status()  # Raises an exception for 4xx/5xx errors
+        sessions = response.json()
+        return sessions
+    except httpx.HTTPError as e:
+        print(f"Error fetching sessions: {e}")
+        return []
+    except json.JSONDecodeError:
+        print("Error parsing response JSON")
+        return []
+
+
 def chat(user_input: str, is_blocking: bool):
     endpoint = "/run" if is_blocking else "/run_sse"
     url = f"http://localhost:8000{endpoint}"
     
     payload = {
-        "app_name": "agent",  
+        "app_name": APP_NAME,  
         "newMessage": {"role": "user", "parts": [{"text": user_input}]},         
-        "userId": "test_user",
+        "userId": USER_ID,
         "sessionId": "session_2",
         "streaming": not is_blocking
     }
@@ -63,4 +82,6 @@ if __name__ == "__main__":
                         help="Use blocking /run instead of streaming /run_sse")
     
     args = parser.parse_args()
+
+    print("Available sessions:", get_sessions())
     chat(args.prompt, args.blocking)
