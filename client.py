@@ -65,10 +65,14 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
             intent_buffer = ""
 
             with httpx.Client() as client:
-                with connect_sse(client, "POST", url, json=payload, timeout=None) as event_source:
+                with connect_sse(client,
+                                 "POST",
+                                 url,
+                                 json=payload,
+                                 timeout=None) as event_source:
                     for sse in event_source.iter_sse():
                         data = json.loads(sse.data)
-                        
+
                         node_name = data.get("author")
                         # print(node_name)
 
@@ -96,6 +100,11 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                                 intent_buffer = ""  # Reset buffer
                             except json.JSONDecodeError:
                                 pass
+                        else:
+                            parts = data.get("content", {}).get("parts", [])
+                            if parts and "text" in parts[0]:
+                                text_chunk = parts[0]["text"]
+                                print(text_chunk, end="", flush=True)
             print("\n")
 
         else:
@@ -127,8 +136,8 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
             f"\n[Error] Server returned an error: {exc.response.status_code} - {exc.response.text}"
         )
         sys.exit(1)
-    except json.JSONDecodeError:
-        print(f"\n[Error] Error parsing response: {response.text}")
+    except json.JSONDecodeError as exc:
+        print(f"\n[Error] Error parsing JSON data: {exc}")
         sys.exit(1)
 
 
