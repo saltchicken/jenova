@@ -38,6 +38,19 @@ class SessionManager:
         return httpx.delete(f"{self.prefix}/{session_id}").json()
 
 
+def get_text_from_event(event_data: dict) -> str | None:
+    """Safely extracts and combines text from all parts of an event payload."""
+    parts = event_data.get("content", {}).get("parts", [])
+
+    # Extract text from every part that has a 'text' key, and join them together
+    text_chunks = [part["text"] for part in parts if "text" in part]
+
+    if text_chunks:
+        return "".join(text_chunks)
+
+    return None
+
+
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
          user_id: str):
     endpoint = "/run" if is_blocking else "/run_sse"
@@ -63,6 +76,7 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
         if not is_blocking:
             # --- STREAMING LOGIC ---
             intent_buffer = ""
+            streamed_nodes = set()  # Track nodes that have streamed
 
             with httpx.Client() as client:
                 with connect_sse(client,
@@ -74,37 +88,32 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                         data = json.loads(sse.data)
 
                         node_name = data.get("author")
-                        # print(node_name)
+                        is_partial = data.get("partial")
+                        text_chunk = get_text_from_event(data)
 
-                        if data.get("partial"):
-                            parts = data.get("content", {}).get("parts", [])
-                            if parts and "text" in parts[0]:
-                                text_chunk = parts[0]["text"]
+                        # 1. Handle intent classification silently
+                        if node_name == "classify_intent":
+                            if is_partial and text_chunk:
+                                intent_buffer += text_chunk
+                            elif not is_partial and intent_buffer:
+                                try:
+                                    parsed_data = json.loads(intent_buffer)
+                                    parsed_intent = parsed_data.get("intent")
+                                except json.JSONDecodeError:
+                                    pass
+                                finally:
+                                    intent_buffer = ""
 
-                                # If it's from the intent classifier, buffer it instead of printing
-                                if node_name == "classify_intent":
-                                    intent_buffer += text_chunk
-                                elif node_name == "answer_question":
-                                    print(text_chunk, end="", flush=True)
-                                else:
-                                    print(f"Haven't handled {node_name} yet")
-
-                        # Once the classifier node finishes, parse the buffered JSON
-                        elif node_name == "classify_intent" and not data.get(
-                                "partial") and intent_buffer:
-                            try:
-                                parsed_data = json.loads(intent_buffer)
-                                parsed_intent = parsed_data.get("intent")
-                                # Optional: Do something programmatically with parsed_intent here
-                                # print(f"[Debug: Parsed intent is '{parsed_intent}'] ")
-                                intent_buffer = ""  # Reset buffer
-                            except json.JSONDecodeError:
-                                pass
-                        else:
-                            parts = data.get("content", {}).get("parts", [])
-                            if parts and "text" in parts[0]:
-                                text_chunk = parts[0]["text"]
+                        # 2. Print visible text chunks for all other nodes
+                        elif text_chunk:
+                            if is_partial:
+                                # Print the stream and record that this node streams
+                                streamed_nodes.add(node_name)
                                 print(text_chunk, end="", flush=True)
+                            elif not is_partial and node_name not in streamed_nodes:
+                                # ONLY print final events if we didn't already stream them!
+                                print(text_chunk, end="", flush=True)
+
             print("\n")
 
         else:
@@ -116,14 +125,9 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
             if isinstance(data, list):
                 for event in data:
                     node_name = event.get("author")
-                    # if node_name == "classify_intent":
-                    #     continue
-                    print("------------")
-                    print(f"Node name: {node_name}")
-                    parts = event.get("content", {}).get("parts", [])
-                    if parts and "text" in parts[0]:
-                        print(parts[0]["text"])
-                    print("----------")
+                    text_chunk = get_text_from_event(event)
+                    if text_chunk:
+                        print(text_chunk)
             else:
                 print("Unexpected response format:", data)
             print("\n")
