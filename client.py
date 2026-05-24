@@ -113,6 +113,9 @@ def _handle_streaming(url: str, payload: dict) -> None:
                     print(f"[{node_name}]: ", end="", flush=True)
                     current_printing_node = node_name
 
+                    # TODO: Make sure this isn't a bug
+                    streamed_nodes.clear()
+
                 if is_partial:
                     streamed_nodes.add(node_name)
                     print(text_chunk, end="", flush=True)
