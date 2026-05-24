@@ -20,6 +20,9 @@ class IntentCategory(BaseModel):
     """Schema for categorizing user intent."""
     intent: Literal["action", "question", "other"]
 
+class QuestionCategory(BaseModel):
+    """Schema for categorizing the type of question."""
+    category: Literal["tech", "math", "general"]
 
 classify_intent = Agent(
     model=llm_client,
@@ -45,13 +48,44 @@ take_action = Agent(
     ),
     tools=[turn_on_lights, turn_off_lights])
 
-answer_question = Agent(
+classify_question = Agent(
     model=llm_client,
-    name="answer_question",
-    instruction=
-    ("You are a helpful assistant. Here is the conversation history so far:\n"
-     "{history?}\n\n"
-     "Based on the history, please answer the latest user question clearly: {input}"
+    name="_classify_question",
+    instruction=(
+        "You are a sub-routing assistant. Categorize the user's question: {input}\n"
+        "- Choose 'tech' if it's about programming, software, or operating systems.\n"
+        "- Choose 'math' if it involves calculations or mathematical concepts.\n"
+        "- Choose 'general' for anything else.\n"
+        "CRITICAL: You MUST respond with ONLY a valid JSON object. Example: {\"category\": \"tech\"}"
+    ),
+    output_schema=QuestionCategory,
+    output_key="category",
+)
+
+tech_expert = Agent(
+    model=llm_client,
+    name="tech_expert",
+    instruction=(
+        "You are a senior software engineer. Answer the following technical question "
+        "clearly and concisely: {input}\n\nHere is the conversation history:\n{history?}"
+    ),
+)
+
+math_expert = Agent(
+    model=llm_client,
+    name="math_expert",
+    instruction=(
+        "You are a mathematician. Solve or answer the following math question "
+        "step-by-step: {input}\n\nHere is the conversation history:\n{history?}"
+    ),
+)
+
+general_expert = Agent(
+    model=llm_client,
+    name="general_expert",
+    instruction=(
+        "You are a helpful AI assistant. Answer the following general question: {input}\n\n"
+        "Here is the conversation history:\n{history?}"
     ),
 )
 
