@@ -12,15 +12,14 @@ from jenova.nodes import handle_other
 from jenova.nodes import IntentCategory
 from jenova.nodes import take_action
 
+from jenova.utils import get_full_history
+
 
 def process_input(node_input: str, ctx: Context):
     """Processes the input string and updates the conversation history."""
-    history = ctx.state.get("history", [])
-
-    history.append({"role": "user", "content": node_input})
+    history = get_full_history(ctx)
 
     return Event(state={"input": node_input, "history": history})
-
 
 def route_on_intent(intent: IntentCategory):
     """Yields an Event with a specific route based on the classification."""

@@ -20,7 +20,7 @@ class IntentCategory(BaseModel):
 
 classify_intent = Agent(
     model=LiteLlm(model="ollama_chat/devstral-small-2"),
-    name="classify_intent",
+    name="_classify_intent",
     instruction=
     ("You are a routing assistant. Based on the input, decide the intent: {input}\n"
      "- Choose 'action' if they requesting for you to take an action.\n"
