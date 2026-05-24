@@ -73,11 +73,11 @@ def _handle_streaming(url: str, payload: dict) -> None:
                         logger.opt(raw=True).info(spoken_text)
                 else:
                     if spoken_text and is_internal:
-                        logger.debug(spoken_text)
+                        logger.debug(f"[{node_name}]{spoken_text}")
                     if tool_log:
-                        logger.debug(tool_log)
+                        logger.debug(f"[{node_name}]{tool_log}")
                     if thought_text:
-                        logger.debug(thought_text)
+                        logger.debug(f"[{node_name}]{thought_text}")
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -99,13 +99,14 @@ def _handle_blocking(url: str, payload: dict) -> None:
             spoken_text, tool_log, thought_text = parse_event_parts(event)
 
             if spoken_text and not is_internal:
+                logger.debug(f"[{node_name}]")
                 logger.opt(raw=True).info(spoken_text)
             if spoken_text and is_internal:
-                logger.debug(spoken_text)
+                logger.debug(f"[{node_name}]{spoken_text}")
             if tool_log:
-                logger.debug(tool_log)
+                logger.debug(f"[{node_name}]{tool_log}")
             if thought_text:
-                logger.debug(thought_text)
+                logger.debug(f"[{node_name}]{thought_text}")
 
     else:
         logger.warning(f"Unexpected response format: {data}")
