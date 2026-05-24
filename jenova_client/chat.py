@@ -49,15 +49,16 @@ def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
     streamed_nodes = set()
     current_printing_node = None  # Track which node is outputting
+    
+    # ANSI color codes
+    gray = "\033[35m"
+    reset = "\033[0m"
 
     with httpx.Client() as client:
         with connect_sse(client, "POST", url, json=payload,
                          timeout=None) as event_source:
             for sse in event_source.iter_sse():
                 data = json.loads(sse.data)
-
-                # # TODO: Enable this for figuring out how to parse events. Remove when needed.
-                # print("RAW EVENT:", json.dumps(data, indent=2))
 
                 node_name = data.get("author")
                 is_partial = data.get("partial")
@@ -66,28 +67,38 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 if not node_name or not text_chunk:
                     continue
 
+                # Determine if we should apply color
+                is_internal = node_name.startswith("_")
+                c_start = gray if is_internal else ""
+                c_end = reset if is_internal else ""
+
                 # If a different node starts talking, print a new prefix
                 if current_printing_node != node_name:
                     if current_printing_node is not None:
-                        logger.opt(raw=True).info("\n")  # Add a newline to close out the previous node
-                    logger.opt(raw=True).info(f"[{node_name}]: ")
+                        logger.opt(raw=True).info("\n")  
+                    
+                    # Wrap the prefix in the color codes
+                    logger.opt(raw=True).info(f"{c_start}[{node_name}]: {c_end}")
                     current_printing_node = node_name
-
-                    # TODO: Make sure this isn't a bug
+                    # TODO: Probably a better way to handle the streamed_nodes logic
                     streamed_nodes.clear()
 
+                # Wrap every chunk so the color persists across the stream
                 if is_partial:
                     streamed_nodes.add(node_name)
-                    logger.opt(raw=True).info(text_chunk)
+                    logger.opt(raw=True).info(f"{c_start}{text_chunk}{c_end}")
                 elif not is_partial and node_name not in streamed_nodes:
-                    # ONLY print final events if we didn't already stream them
-                    logger.opt(raw=True).info(text_chunk)
+                    logger.opt(raw=True).info(f"{c_start}{text_chunk}{c_end}")
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
     """Handles a blocking chat request."""
     response = httpx.post(url, json=payload, timeout=None)
     response.raise_for_status()
+    
+    # ANSI color codes
+    gray = "\033[90m"
+    reset = "\033[0m"
 
     data = response.json()
     if isinstance(data, list):
@@ -96,7 +107,11 @@ def _handle_blocking(url: str, payload: dict) -> None:
             text_chunk = get_text_from_event(event)
 
             if text_chunk and node_name:
-                logger.info(f"[{node_name}]: {text_chunk}")
+                if node_name.startswith("_"):
+                    # Apply color to the entire log message
+                    logger.info(f"{gray}[{node_name}]: {text_chunk}{reset}")
+                else:
+                    logger.info(f"[{node_name}]: {text_chunk}")
     else:
         logger.warning(f"Unexpected response format: {data}")
 
