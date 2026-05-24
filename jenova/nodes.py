@@ -20,9 +20,11 @@ class IntentCategory(BaseModel):
     """Schema for categorizing user intent."""
     intent: Literal["action", "question", "other"]
 
+
 class QuestionCategory(BaseModel):
     """Schema for categorizing the type of question."""
     category: Literal["tech", "math", "general"]
+
 
 classify_intent = Agent(
     model=llm_client,
@@ -51,12 +53,12 @@ take_action = Agent(
 classify_question = Agent(
     model=llm_client,
     name="_classify_question",
-    instruction=(
-        "You are a sub-routing assistant. Categorize the user's question: {input}\n"
-        "- Choose 'tech' if it's about programming, software, or operating systems.\n"
-        "- Choose 'math' if it involves calculations or mathematical concepts.\n"
-        "- Choose 'general' for anything else.\n"
-        "CRITICAL: You MUST respond with ONLY a valid JSON object. Example: {\"category\": \"tech\"}"
+    instruction=
+    ("You are a sub-routing assistant. Categorize the user's question: {input}\n"
+     "- Choose 'tech' if it's about programming, software, or operating systems.\n"
+     "- Choose 'math' if it involves calculations or mathematical concepts.\n"
+     "- Choose 'general' for anything else.\n"
+     "CRITICAL: You MUST respond with ONLY a valid JSON object. Example: {\"category\": \"tech\"}"
     ),
     output_schema=QuestionCategory,
     output_key="category",
@@ -65,9 +67,9 @@ classify_question = Agent(
 tech_expert = Agent(
     model=llm_client,
     name="tech_expert",
-    instruction=(
-        "You are a senior software engineer. Answer the following technical question "
-        "clearly and concisely: {input}\n\nHere is the conversation history:\n{history?}"
+    instruction=
+    ("You are a senior software engineer. Answer the following technical question "
+     "clearly and concisely: {input}\n\nHere is the conversation history:\n{history?}"
     ),
 )
 
@@ -83,10 +85,9 @@ math_expert = Agent(
 general_expert = Agent(
     model=llm_client,
     name="general_expert",
-    instruction=(
-        "You are a helpful AI assistant. Answer the following general question: {input}\n\n"
-        "Here is the conversation history:\n{history?}"
-    ),
+    instruction=
+    ("You are a helpful AI assistant. Answer the following general question: {input}\n\n"
+     "Here is the conversation history:\n{history?}"),
 )
 
 handle_other = Agent(

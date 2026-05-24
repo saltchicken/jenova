@@ -73,7 +73,9 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 if current_node != node_name:
                     current_node = node_name
                     if spoken_text or tool_log or thought_text:
-                        logger.opt(raw=True, colors=True).debug("\n<blue>[{}]</blue>\n", node_name)
+                        logger.opt(raw=True,
+                                   colors=True).debug("\n<blue>[{}]</blue>\n",
+                                                      node_name)
                     # else:
                     #     logger.opt(raw=True, colors=True).debug("This node hasn't been captured")
 
@@ -81,11 +83,16 @@ def _handle_streaming(url: str, payload: dict) -> None:
                     if spoken_text and not is_internal:
                         logger.opt(raw=True, colors=True).info(spoken_text)
                     if spoken_text and is_internal:
-                        logger.opt(raw=True, colors=True).debug("<light-blue>{}</light-blue>", spoken_text)
+                        logger.opt(raw=True, colors=True).debug(
+                            "<light-blue>{}</light-blue>", spoken_text)
                     if tool_log:
-                        logger.opt(raw=True, colors=True).debug("<yellow>{}</yellow>", tool_log)
+                        logger.opt(raw=True,
+                                   colors=True).debug("<yellow>{}</yellow>",
+                                                      tool_log)
                     if thought_text:
-                        logger.opt(raw=True, colors=True).debug("<magenta>{}</magenta>", thought_text)
+                        logger.opt(raw=True,
+                                   colors=True).debug("<magenta>{}</magenta>",
+                                                      thought_text)
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -107,19 +114,23 @@ def _handle_blocking(url: str, payload: dict) -> None:
             spoken_text, tool_log, thought_text = parse_event_parts(event)
 
             if spoken_text or tool_log or thought_text:
-                logger.opt(raw=True, colors=True).debug("\n<blue>[{}]</blue>\n", node_name)
+                logger.opt(raw=True, colors=True).debug("\n<blue>[{}]</blue>\n",
+                                                        node_name)
             # else:
             #     logger.opt(raw=True, colors=True).debug("This node hasn't been captured")
-
 
             if spoken_text and not is_internal:
                 logger.opt(raw=True, colors=True).info(spoken_text)
             if spoken_text and is_internal:
-                logger.opt(raw=True, colors=True).debug("<light-blue>{}</light-blue>", spoken_text)
+                logger.opt(raw=True,
+                           colors=True).debug("<light-blue>{}</light-blue>",
+                                              spoken_text)
             if tool_log:
-                logger.opt(raw=True, colors=True).debug("<yellow>{}</yellow>", tool_log)
+                logger.opt(raw=True, colors=True).debug("<yellow>{}</yellow>",
+                                                        tool_log)
             if thought_text:
-                logger.opt(raw=True, colors=True).debug("<magenta>{}</magenta>", thought_text)
+                logger.opt(raw=True, colors=True).debug("<magenta>{}</magenta>",
+                                                        thought_text)
 
     else:
         logger.warning(f"Unexpected response format: {data}")

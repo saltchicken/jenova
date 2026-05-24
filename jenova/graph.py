@@ -8,13 +8,13 @@ from google.adk import Context
 from google.adk import Event
 from google.adk import Workflow
 
-from jenova.nodes import IntentCategory
-from jenova.nodes import QuestionCategory
 from jenova.nodes import classify_intent
 from jenova.nodes import classify_question
 from jenova.nodes import general_expert
 from jenova.nodes import handle_other
+from jenova.nodes import IntentCategory
 from jenova.nodes import math_expert
+from jenova.nodes import QuestionCategory
 from jenova.nodes import take_action
 from jenova.nodes import tech_expert
 from jenova.utils import get_full_history
@@ -31,7 +31,8 @@ def route_on_intent(intent: IntentCategory) -> Generator[Event, None, None]:
     yield Event(route=intent.intent)
 
 
-def route_on_question_type(category: QuestionCategory) -> Generator[Event, None, None]:
+def route_on_question_type(
+        category: QuestionCategory) -> Generator[Event, None, None]:
     """Yields an Event routing to a specific expert based on the question category."""
     yield Event(route=category.category)
 
@@ -44,7 +45,8 @@ root_agent = Workflow(
             route_on_intent,
             {
                 "action": take_action,
-                "question": classify_question,  # Routes to sub-classifier instead of answering directly
+                "question":
+                    classify_question,  # Routes to sub-classifier instead of answering directly
                 "other": handle_other,
             },
         ),
