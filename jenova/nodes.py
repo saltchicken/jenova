@@ -48,9 +48,15 @@ answer_question = Agent(
 )
 
 
-def handle_other():
-    """Fallback handler for unrecognized intents."""
-    yield Event(
-        message=
-        "I am an ai assistant. I can answer your questions or take actions for you."
+handle_other = Agent(
+    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    name="handle_other",
+    instruction=(
+        "You are the Jenova AI assistant. The user just said something that isn't a direct question or action command.\n"
+        "Here is the conversation history:\n"
+        "{history?}\n\n"
+        "Respond naturally to the user's input: {input}\n"
+        "If it is a greeting or small talk, reply politely in kind. If their intent is unclear, gently remind them you can answer questions or control the lights.\n"
+        "Talk to the user, don't include your thinking process\n"
     )
+)
