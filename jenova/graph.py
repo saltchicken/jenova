@@ -14,14 +14,16 @@ from jenova.nodes import take_action
 
 from jenova.utils import get_full_history
 
+from typing import Generator
 
-def process_input(node_input: str, ctx: Context):
+
+def process_input(node_input: str, ctx: Context) -> Event:
     """Processes the input string and updates the conversation history."""
     history = get_full_history(ctx)
 
     return Event(state={"input": node_input, "history": history})
 
-def route_on_intent(intent: IntentCategory):
+def route_on_intent(intent: IntentCategory)-> Generator[Event, None, None]:
     """Yields an Event with a specific route based on the classification."""
     yield Event(route=intent.intent)
 
