@@ -1,3 +1,8 @@
+"""
+Tools for controlling lights.
+"""
+
+
 def turn_on_lights(room: str) -> str:
     """
     Turns on lights in the specified room.

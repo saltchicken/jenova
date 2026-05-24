@@ -1,3 +1,7 @@
+"""
+Defines the individual agents and nodes for the workflow.
+"""
+
 from typing import Literal
 
 from google.adk import Agent
@@ -10,6 +14,7 @@ from agent.tools.lights import turn_on_lights
 
 
 class IntentCategory(BaseModel):
+    """Schema for categorizing user intent."""
     intent: Literal["action", "question", "other"]
 
 
@@ -44,6 +49,7 @@ answer_question = Agent(
 
 
 def handle_other():
+    """Fallback handler for unrecognized intents."""
     yield Event(
         message=
         "I am an ai assistant. I can answer your questions or take actions for you."

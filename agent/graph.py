@@ -1,3 +1,7 @@
+"""
+Defines the main agent workflow graph and routing logic.
+"""
+
 from google.adk import Context
 from google.adk import Event
 from google.adk import Workflow
@@ -10,6 +14,7 @@ from agent.nodes import take_action
 
 
 def process_input(node_input: str, ctx: Context):
+    """Processes the input string and updates the conversation history."""
     history = ctx.state.get("history", [])
 
     history.append({"role": "user", "content": node_input})

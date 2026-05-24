@@ -1,3 +1,7 @@
+"""
+Utility functions for the agent.
+"""
+
 from google.adk import Context
 
 
