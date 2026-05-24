@@ -62,7 +62,10 @@ def get_text_from_event(event_data: dict) -> str | None:
 
     for part in parts:
         if "text" in part:
-            text_chunks.append(part["text"])
+            if part.get("thought", False):
+                pass
+            else:
+                text_chunks.append(part["text"])
 
         # Capture the tool execution request
         elif "functionCall" in part:
