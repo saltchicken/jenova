@@ -70,13 +70,12 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
     }
 
     print(f"\nUser:  {user_input}")
-    print("Agent: ", end="", flush=True)
 
     try:
         if not is_blocking:
             # --- STREAMING LOGIC ---
-            intent_buffer = ""
-            streamed_nodes = set()  # Track nodes that have streamed
+            streamed_nodes = set()
+            current_printing_node = None  # Track which node is outputting
 
             with httpx.Client() as client:
                 with connect_sse(client,
@@ -91,28 +90,22 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                         is_partial = data.get("partial")
                         text_chunk = get_text_from_event(data)
 
-                        # 1. Handle intent classification silently
-                        if node_name == "classify_intent":
-                            if is_partial and text_chunk:
-                                intent_buffer += text_chunk
-                            elif not is_partial and intent_buffer:
-                                try:
-                                    parsed_data = json.loads(intent_buffer)
-                                    parsed_intent = parsed_data.get("intent")
-                                except json.JSONDecodeError:
-                                    pass
-                                finally:
-                                    intent_buffer = ""
+                        if not node_name or not text_chunk:
+                            continue
 
-                        # 2. Print visible text chunks for all other nodes
-                        elif text_chunk:
-                            if is_partial:
-                                # Print the stream and record that this node streams
-                                streamed_nodes.add(node_name)
-                                print(text_chunk, end="", flush=True)
-                            elif not is_partial and node_name not in streamed_nodes:
-                                # ONLY print final events if we didn't already stream them!
-                                print(text_chunk, end="", flush=True)
+                        # If a different node starts talking, print a new prefix
+                        if current_printing_node != node_name:
+                            if current_printing_node is not None:
+                                print() # Add a newline to close out the previous node
+                            print(f"[{node_name}]: ", end="", flush=True)
+                            current_printing_node = node_name
+
+                        if is_partial:
+                            streamed_nodes.add(node_name)
+                            print(text_chunk, end="", flush=True)
+                        elif not is_partial and node_name not in streamed_nodes:
+                            # ONLY print final events if we didn't already stream them
+                            print(text_chunk, end="", flush=True)
 
             print("\n")
 
@@ -126,8 +119,9 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                 for event in data:
                     node_name = event.get("author")
                     text_chunk = get_text_from_event(event)
-                    if text_chunk:
-                        print(text_chunk)
+                    
+                    if text_chunk and node_name:
+                        print(f"[{node_name}]: {text_chunk}")
             else:
                 print("Unexpected response format:", data)
             print("\n")
