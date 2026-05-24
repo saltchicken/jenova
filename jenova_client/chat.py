@@ -108,7 +108,7 @@ def _handle_blocking(url: str, payload: dict) -> None:
             spoken_text, _tool_log, _thought_text = parse_event_parts(event)
 
             if spoken_text and not is_internal:
-                logger.opt(raw=True).info(f"[{node_name}]: \n{spoken_text}\n\n")
+                logger.opt(raw=True).info(spoken_text)
 
     else:
         logger.warning(f"Unexpected response format: {data}")
