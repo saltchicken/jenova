@@ -2,6 +2,8 @@
 Defines the main agent workflow graph and routing logic.
 """
 
+from typing import Generator
+
 from google.adk import Context
 from google.adk import Event
 from google.adk import Workflow
@@ -11,10 +13,7 @@ from jenova.nodes import classify_intent
 from jenova.nodes import handle_other
 from jenova.nodes import IntentCategory
 from jenova.nodes import take_action
-
 from jenova.utils import get_full_history
-
-from typing import Generator
 
 
 def process_input(node_input: str, ctx: Context) -> Event:
@@ -23,7 +22,8 @@ def process_input(node_input: str, ctx: Context) -> Event:
 
     return Event(state={"input": node_input, "history": history})
 
-def route_on_intent(intent: IntentCategory)-> Generator[Event, None, None]:
+
+def route_on_intent(intent: IntentCategory) -> Generator[Event, None, None]:
     """Yields an Event with a specific route based on the classification."""
     yield Event(route=intent.intent)
 

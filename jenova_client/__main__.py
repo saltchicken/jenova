@@ -14,6 +14,7 @@ from jenova_client.constants import DEFAULT_BASE_URL
 from jenova_client.constants import DEFAULT_USER_ID
 from jenova_client.session import SessionManager
 
+
 def configure_global_logger(debug: bool):
     """Sets the log format and level for the entire application."""
     logger.remove()
@@ -33,7 +34,9 @@ def main():
                         default=DEFAULT_USER_ID,
                         help="User ID for the session")
 
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--debug",
+                        action="store_true",
+                        help="Enable debug logging")
 
     subparsers = parser.add_subparsers(dest="command",
                                        help="Available commands")
@@ -64,7 +67,6 @@ def main():
 
     configure_global_logger(args.debug)
 
-
     if not args.command:
         parser.print_help()
         return
@@ -92,9 +94,7 @@ def main():
                 )
                 manager.create(args.session_id)
         except httpx.RequestError as exc:
-            logger.error(
-                f"Unable to connect to server to check session: {exc}"
-            )
+            logger.error(f"Unable to connect to server to check session: {exc}")
             sys.exit(1)
         except httpx.HTTPStatusError as exc:
             logger.error(

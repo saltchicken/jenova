@@ -51,7 +51,8 @@ def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
 
     with httpx.Client() as client:
-        with connect_sse(client, "POST", url, json=payload, timeout=None) as event_source:
+        with connect_sse(client, "POST", url, json=payload,
+                         timeout=None) as event_source:
             for sse in event_source.iter_sse():
                 data = json.loads(sse.data)
 
@@ -77,8 +78,6 @@ def _handle_streaming(url: str, payload: dict) -> None:
                         logger.debug(tool_log)
                     if thought_text:
                         logger.debug(thought_text)
-
-
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -108,13 +107,12 @@ def _handle_blocking(url: str, payload: dict) -> None:
             if thought_text:
                 logger.debug(thought_text)
 
-            
-
     else:
         logger.warning(f"Unexpected response format: {data}")
 
 
-def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str, user_id: str):
+def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
+         user_id: str):
     """Sends a chat message to the agent."""
 
     endpoint = "/run" if is_blocking else "/run_sse"
@@ -142,7 +140,9 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str, use
         logger.error(f"Unable to connect to server: {exc}")
         sys.exit(1)
     except httpx.HTTPStatusError as exc:
-        logger.error(f"Server returned an error: {exc.response.status_code} - {exc.response.text}")
+        logger.error(
+            f"Server returned an error: {exc.response.status_code} - {exc.response.text}"
+        )
         sys.exit(1)
     except json.JSONDecodeError as exc:
         logger.error(f"Error parsing JSON data: {exc}")
