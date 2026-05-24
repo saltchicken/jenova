@@ -23,7 +23,7 @@ server = [
 ]
 
 [project.scripts]
-jenova_client = "jenova_client.client:main"
+jenova_client = "jenova_client.__main__:main"
 
 [tool.pylint.messages_control]
 disable = [
