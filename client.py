@@ -58,9 +58,26 @@ class SessionManager:
 def get_text_from_event(event_data: dict) -> str | None:
     """Safely extracts and combines text from all parts of an event payload."""
     parts = event_data.get("content", {}).get("parts", [])
+    text_chunks = []
 
-    # Extract text from every part that has a 'text' key, and join them together
-    text_chunks = [part["text"] for part in parts if "text" in part]
+    for part in parts:
+        if "text" in part:
+            text_chunks.append(part["text"])
+
+        # Capture the tool execution request
+        elif "functionCall" in part:
+            func_data = part["functionCall"]
+            name = func_data.get("name", "UnknownTool")
+            args = func_data.get("args", {})
+            text_chunks.append(
+                f"\n⚡ [Executing Tool: {name} | Args: {args}] ⚡")
+
+        # Capture the result returning from the tool
+        elif "functionResponse" in part:
+            func_data = part["functionResponse"]
+            name = func_data.get("name", "UnknownTool")
+            result = func_data.get("response", {}).get("result", "")
+            text_chunks.append(f"\n✅ [Tool Result ({name}): {result}] ✅")
 
     if text_chunks:
         return "".join(text_chunks)
@@ -78,6 +95,9 @@ def _handle_streaming(url: str, payload: dict) -> None:
                          timeout=None) as event_source:
             for sse in event_source.iter_sse():
                 data = json.loads(sse.data)
+
+                # # TODO: Enable this for figuring out how to parse events. Remove when needed.
+                # print("RAW EVENT:", json.dumps(data, indent=2))
 
                 node_name = data.get("author")
                 is_partial = data.get("partial")
