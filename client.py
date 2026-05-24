@@ -22,8 +22,14 @@ class SessionManager:
     def list(self) -> dict | list:
         return httpx.get(self.prefix).json()
 
-    def get(self, session_id: str) -> dict:
-        return httpx.get(f"{self.prefix}/{session_id}").json()
+    def get(self, session_id: str) -> Optional[dict]:
+        response = httpx.get(f"{self.prefix}/{session_id}")
+        if response.status_code == 404:
+            return None
+        
+        # Raise an exception for any other HTTP errors (e.g., 500)
+        response.raise_for_status()
+        return response.json()
 
     def create(self,
                session_id: Optional[str] = None,
@@ -68,8 +74,6 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
         "sessionId": session_id,
         "streaming": not is_blocking
     }
-
-    # print(f"\nUser:  {user_input}")
 
     try:
         if not is_blocking:
@@ -153,8 +157,10 @@ def main():
     chat_parser = subparsers.add_parser("chat",
                                         help="Send a message to the agent")
     chat_parser.add_argument("prompt", type=str, help="The message to send")
+    
+    # REQUIRE the session-id flag without a default
     chat_parser.add_argument("--session-id",
-                             default="default_session",
+                             required=True,
                              help="The session ID to use")
     chat_parser.add_argument(
         "--blocking",
@@ -189,6 +195,19 @@ def main():
                 print(manager.delete(args.session_id))
 
     elif args.command == "chat":
+        # Check if the session exists, and if not, create it
+        try:
+            session = manager.get(args.session_id)
+            if session is None:
+                print(f"[Info] Session '{args.session_id}' not found. Creating a new one...")
+                manager.create(args.session_id)
+        except httpx.RequestError as exc:
+            print(f"\n[Error] Unable to connect to server to check session: {exc}")
+            sys.exit(1)
+        except httpx.HTTPStatusError as exc:
+            print(f"\n[Error] Failed to get session: {exc.response.status_code} - {exc.response.text}")
+            sys.exit(1)
+
         chat(user_input=args.prompt,
              is_blocking=args.blocking,
              session_id=args.session_id,
