@@ -12,8 +12,8 @@ from pydantic import BaseModel
 from jenova.tools.lights import turn_off_lights
 from jenova.tools.lights import turn_on_lights
 
-DEFAULT_MODEL = "ollama_chat/devstral-small-2"
-# DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
+# DEFAULT_MODEL = "ollama_chat/devstral-small-2"
+DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
 llm_client = LiteLlm(model=DEFAULT_MODEL)
 
 class IntentCategory(BaseModel):
