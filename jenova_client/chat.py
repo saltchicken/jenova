@@ -7,6 +7,7 @@ import sys
 
 import httpx
 from httpx_sse import connect_sse
+from loguru import logger
 
 from jenova_client.constants import APP_NAME
 
@@ -68,8 +69,8 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 # If a different node starts talking, print a new prefix
                 if current_printing_node != node_name:
                     if current_printing_node is not None:
-                        print()  # Add a newline to close out the previous node
-                    print(f"[{node_name}]: ", end="", flush=True)
+                        logger.opt(raw=True).info("\n")  # Add a newline to close out the previous node
+                    logger.opt(raw=True).info(f"[{node_name}]: ")
                     current_printing_node = node_name
 
                     # TODO: Make sure this isn't a bug
@@ -77,10 +78,10 @@ def _handle_streaming(url: str, payload: dict) -> None:
 
                 if is_partial:
                     streamed_nodes.add(node_name)
-                    print(text_chunk, end="", flush=True)
+                    logger.opt(raw=True).info(text_chunk)
                 elif not is_partial and node_name not in streamed_nodes:
                     # ONLY print final events if we didn't already stream them
-                    print(text_chunk, end="", flush=True)
+                    logger.opt(raw=True).info(text_chunk)
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -95,9 +96,9 @@ def _handle_blocking(url: str, payload: dict) -> None:
             text_chunk = get_text_from_event(event)
 
             if text_chunk and node_name:
-                print(f"[{node_name}]: {text_chunk}")
+                logger.info(f"[{node_name}]: {text_chunk}")
     else:
-        print("Unexpected response format:", data)
+        logger.warning(f"Unexpected response format: {data}")
 
 
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
@@ -125,13 +126,13 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
         else:
             _handle_blocking(url, payload)
     except httpx.RequestError as exc:
-        print(f"\n[Error] Unable to connect to server: {exc}")
+        logger.error(f"Unable to connect to server: {exc}")
         sys.exit(1)
     except httpx.HTTPStatusError as exc:
-        print(
-            f"\n[Error] Server returned an error: {exc.response.status_code} - {exc.response.text}"
+        logger.error(
+            f"Server returned an error: {exc.response.status_code} - {exc.response.text}"
         )
         sys.exit(1)
     except json.JSONDecodeError as exc:
-        print(f"\n[Error] Error parsing JSON data: {exc}")
+        logger.error(f"Error parsing JSON data: {exc}")
         sys.exit(1)

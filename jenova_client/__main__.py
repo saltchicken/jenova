@@ -7,6 +7,7 @@ import json
 import sys
 
 import httpx
+from loguru import logger
 
 from jenova_client.chat import chat
 from jenova_client.constants import DEFAULT_BASE_URL
@@ -60,32 +61,32 @@ def main():
 
     if args.command == "sessions":
         if args.action == "list":
-            print(json.dumps(manager.list(), indent=2))
+            logger.info(json.dumps(manager.list(), indent=2))
         elif args.action == "create":
-            print(manager.create(args.session_id))
+            logger.info(manager.create(args.session_id))
         elif args.action == "delete":
             if not args.session_id:
-                print("Error: --session-id is required for delete.")
+                logger.error("--session-id is required for delete.")
             else:
-                print(manager.delete(args.session_id))
+                logger.info(manager.delete(args.session_id))
 
     elif args.command == "chat":
         # Check if the session exists, and if not, create it
         try:
             session = manager.get(args.session_id)
             if session is None:
-                print(
-                    f"[Info] Session '{args.session_id}' not found. Creating a new one..."
+                logger.info(
+                    f"Session '{args.session_id}' not found. Creating a new one..."
                 )
                 manager.create(args.session_id)
         except httpx.RequestError as exc:
-            print(
-                f"\n[Error] Unable to connect to server to check session: {exc}"
+            logger.error(
+                f"Unable to connect to server to check session: {exc}"
             )
             sys.exit(1)
         except httpx.HTTPStatusError as exc:
-            print(
-                f"\n[Error] Failed to get session: {exc.response.status_code} - {exc.response.text}"
+            logger.error(
+                f"Failed to get session: {exc.response.status_code} - {exc.response.text}"
             )
             sys.exit(1)
 

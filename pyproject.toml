@@ -12,6 +12,7 @@ dependencies = [
     "asyncpg",
     "httpx",
     "httpx-sse",
+    "loguru",
 ]
 
 [project.optional-dependencies]
