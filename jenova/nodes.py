@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from jenova.tools.lights import turn_off_lights
 from jenova.tools.lights import turn_on_lights
 
+DEFAULT_MODEL = "ollama_chat/devstral-small-2"
+llm_client = LiteLlm(model=DEFAULT_MODEL)
 
 class IntentCategory(BaseModel):
     """Schema for categorizing user intent."""
@@ -19,7 +21,7 @@ class IntentCategory(BaseModel):
 
 
 classify_intent = Agent(
-    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    model=llm_client,
     name="_classify_intent",
     instruction=
     ("You are a routing assistant. Based on the input, decide the intent: {input}\n"
@@ -31,14 +33,14 @@ classify_intent = Agent(
 )
 
 take_action = Agent(
-    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    model=llm_client,
     name="take_action",
     instruction=
     "Figure out what the user wants you to do and take that action based on this input: {input}",
     tools=[turn_on_lights, turn_off_lights])
 
 answer_question = Agent(
-    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    model=llm_client,
     name="answer_question",
     instruction=
     ("You are a helpful assistant. Here is the conversation history so far:\n"
@@ -49,7 +51,7 @@ answer_question = Agent(
 
 
 handle_other = Agent(
-    model=LiteLlm(model="ollama_chat/devstral-small-2"),
+    model=llm_client,
     name="handle_other",
     instruction=(
         "You are the Jenova AI assistant. The user just said something that isn't a direct question or action command.\n"
