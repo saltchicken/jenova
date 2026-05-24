@@ -15,14 +15,6 @@ from jenova_client.constants import DEFAULT_USER_ID
 from jenova_client.session import SessionManager
 
 
-def configure_global_logger(debug: bool):
-    """Sets the log format and level for the entire application."""
-    logger.remove()
-    fmt = "<level>{message}</level>"
-    level = "DEBUG" if debug else "INFO"
-    logger.add(sys.stderr, format=fmt, level=level)
-
-
 def main():
     """Main entry point for the client application."""
     parser = argparse.ArgumentParser(
@@ -64,8 +56,6 @@ def main():
                                 help="Session ID (required for create/delete)")
 
     args = parser.parse_args()
-
-    configure_global_logger(args.debug)
 
     if not args.command:
         parser.print_help()
