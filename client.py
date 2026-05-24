@@ -10,7 +10,7 @@ from typing import Optional
 import httpx
 from httpx_sse import connect_sse
 
-APP_NAME = "agent"
+APP_NAME = "jenova"
 DEFAULT_USER_ID = "test_user"
 DEFAULT_BASE_URL = "http://localhost:8000"
 

@@ -1,4 +1,4 @@
 """
 Agent module initialization.
 """
-from agent.graph import root_agent
+from jenova.graph import root_agent
