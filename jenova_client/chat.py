@@ -12,19 +12,27 @@ from loguru import logger
 from jenova_client.constants import APP_NAME
 
 
-def get_text_from_event(event_data: dict) -> str | None:
+def get_text_from_event(event_data: dict, is_internal: bool = False, apply_colors: bool = False) -> str | None:
     """Safely extracts and combines text from all parts of an event payload."""
     parts = event_data.get("content", {}).get("parts", [])
     text_chunks = []
+    
+    magenta = "\033[35m"
+    reset = "\033[0m"
+    
+    # Only apply magenta if it's an external node AND colors are requested
+    c_start = magenta if (apply_colors and not is_internal) else ""
+    c_end = reset if (apply_colors and not is_internal) else ""
 
     for part in parts:
         if "text" in part:
             if part.get("thought", False):
                 pass
             else:
-                text_chunks.append(part["text"])
+                # Color standard text
+                text_chunks.append(f"{c_start}{part['text']}{c_end}")
 
-        # Capture the tool execution request
+        # Capture the tool execution request (Uncolored)
         elif "functionCall" in part:
             func_data = part["functionCall"]
             name = func_data.get("name", "UnknownTool")
@@ -32,7 +40,7 @@ def get_text_from_event(event_data: dict) -> str | None:
             text_chunks.append(
                 f"\n⚡ [Executing Tool: {name} | Args: {args}] ⚡")
 
-        # Capture the result returning from the tool
+        # Capture the result returning from the tool (Uncolored)
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
             name = func_data.get("name", "UnknownTool")
@@ -48,11 +56,7 @@ def get_text_from_event(event_data: dict) -> str | None:
 def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
     streamed_nodes = set()
-    current_printing_node = None  # Track which node is outputting
-    
-    # ANSI color codes
-    gray = "\033[35m"
-    reset = "\033[0m"
+    current_printing_node = None
 
     with httpx.Client() as client:
         with connect_sse(client, "POST", url, json=payload,
@@ -62,56 +66,76 @@ def _handle_streaming(url: str, payload: dict) -> None:
 
                 node_name = data.get("author")
                 is_partial = data.get("partial")
-                text_chunk = get_text_from_event(data)
+                
+                if not node_name:
+                    continue
+                    
+                is_internal = node_name.startswith("_")
+                
+                # Fetch text chunks formatted for their specific destinations
+                ui_text_chunk = get_text_from_event(data, is_internal=is_internal, apply_colors=True)
+                tts_text_chunk = get_text_from_event(data, is_internal=is_internal, apply_colors=False)
 
-                if not node_name or not text_chunk:
+                if not ui_text_chunk:
                     continue
 
-                # Determine if we should apply color
-                is_internal = node_name.startswith("_")
-                c_start = gray if is_internal else ""
-                c_end = reset if is_internal else ""
-
-                # If a different node starts talking, print a new prefix
+                # ==========================================
+                # 1. TERMINAL UI: Formatting and Logging
+                # ==========================================
                 if current_printing_node != node_name:
                     if current_printing_node is not None:
                         logger.opt(raw=True).info("\n")  
                     
-                    # Wrap the prefix in the color codes
-                    logger.opt(raw=True).info(f"{c_start}[{node_name}]: {c_end}")
+                    logger.opt(raw=True).info(f"[{node_name}]: ")
                     current_printing_node = node_name
-                    # TODO: Probably a better way to handle the streamed_nodes logic
                     streamed_nodes.clear()
 
-                # Wrap every chunk so the color persists across the stream
                 if is_partial:
                     streamed_nodes.add(node_name)
-                    logger.opt(raw=True).info(f"{c_start}{text_chunk}{c_end}")
+                    logger.opt(raw=True).info(f"{ui_text_chunk}")
                 elif not is_partial and node_name not in streamed_nodes:
-                    logger.opt(raw=True).info(f"{c_start}{text_chunk}{c_end}")
+                    logger.opt(raw=True).info(f"{ui_text_chunk}")
+
+                # ==========================================
+                # 2. AUDIO ROUTING: Pure TTS Payload
+                # ==========================================
+                if not is_internal and tts_text_chunk:
+                    # The tts_text_chunk here is completely clean of formatting.
+                    pass
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
     """Handles a blocking chat request."""
     response = httpx.post(url, json=payload, timeout=None)
     response.raise_for_status()
-    
-    # ANSI color codes
-    gray = "\033[90m"
-    reset = "\033[0m"
 
     data = response.json()
     if isinstance(data, list):
         for event in data:
             node_name = event.get("author")
-            text_chunk = get_text_from_event(event)
+            
+            if not node_name:
+                continue
+                
+            is_internal = node_name.startswith("_")
+            
+            ui_text_chunk = get_text_from_event(event, is_internal=is_internal, apply_colors=True)
+            tts_text_chunk = get_text_from_event(event, is_internal=is_internal, apply_colors=False)
 
-            if text_chunk and node_name:
-                if node_name.startswith("_"):
-                    # Apply color to the entire log message
-                    logger.info(f"{gray}[{node_name}]: {text_chunk}{reset}")
-                else:
-                    logger.info(f"[{node_name}]: {text_chunk}")
+            if not ui_text_chunk:
+                continue
+
+            # ==========================================
+            # 1. TERMINAL UI: Formatting and Logging
+            # ==========================================
+            logger.info(f"[{node_name}]: {ui_text_chunk}")
+
+            # ==========================================
+            # 2. AUDIO ROUTING: Pure TTS Payload
+            # ==========================================
+            if not is_internal and tts_text_chunk:
+                pass
+                
     else:
         logger.warning(f"Unexpected response format: {data}")
 
