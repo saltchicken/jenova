@@ -116,6 +116,7 @@ def _handle_blocking(url: str, payload: dict) -> None:
 
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str, user_id: str):
     """Sends a chat message to the agent."""
+
     endpoint = "/run" if is_blocking else "/run_sse"
     url = f"{base_url}{endpoint}"
 

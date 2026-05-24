@@ -14,6 +14,13 @@ from jenova_client.constants import DEFAULT_BASE_URL
 from jenova_client.constants import DEFAULT_USER_ID
 from jenova_client.session import SessionManager
 
+def configure_global_logger(debug: bool):
+    """Sets the log format and level for the entire application."""
+    logger.remove()
+    fmt = "<level>{message}</level>"
+    level = "DEBUG" if debug else "INFO"
+    logger.add(sys.stderr, format=fmt, level=level)
+
 
 def main():
     """Main entry point for the client application."""
@@ -25,6 +32,8 @@ def main():
     parser.add_argument("--user-id",
                         default=DEFAULT_USER_ID,
                         help="User ID for the session")
+
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     subparsers = parser.add_subparsers(dest="command",
                                        help="Available commands")
@@ -52,6 +61,9 @@ def main():
                                 help="Session ID (required for create/delete)")
 
     args = parser.parse_args()
+
+    configure_global_logger(args.debug)
+
 
     if not args.command:
         parser.print_help()
