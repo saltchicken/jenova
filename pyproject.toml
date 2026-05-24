@@ -22,8 +22,14 @@ server = [
     "uvicorn",
 ]
 
+[project.scripts]
+jenova_client = "jenova_client.client:main"
+
 [tool.pylint.messages_control]
 disable = [
     "import-error",
     "no-name-in-module"
 ]
+
+[tool.setuptools]
+packages = ["jenova", "jenova_client"]
