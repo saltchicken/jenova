@@ -13,6 +13,7 @@ from jenova.tools.lights import turn_off_lights
 from jenova.tools.lights import turn_on_lights
 
 DEFAULT_MODEL = "ollama_chat/devstral-small-2"
+# DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
 llm_client = LiteLlm(model=DEFAULT_MODEL)
 
 class IntentCategory(BaseModel):
@@ -27,7 +28,9 @@ classify_intent = Agent(
     ("You are a routing assistant. Based on the input, decide the intent: {input}\n"
      "- Choose 'action' if they requesting for you to take an action.\n"
      "- Choose 'question' if they are asking a question.\n"
-     "- Choose 'other' for anything else."),
+     "- Choose 'other' for anything else.\n"
+     "CRITICAL: You MUST respond with ONLY a valid JSON object containing a single key 'intent'. "
+     "Example: {\"intent\": \"action\"}"),
     output_schema=IntentCategory,
     output_key="intent",
 )
