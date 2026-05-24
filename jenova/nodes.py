@@ -38,9 +38,13 @@ classify_intent = Agent(
 take_action = Agent(
     model=llm_client,
     name="take_action",
-    instruction=
-    "Figure out what the user wants you to do and take that action based on this input: {input}",
-    tools=[turn_on_lights, turn_off_lights])
+    instruction=(
+        "Figure out what the user wants you to do and take that action based on this input: {input}\n"
+        "IMPORTANT: Once the tool has been executed and you receive the result, you MUST stop calling tools. "
+        "Reply directly to the user with a natural, conversational message confirming the action was completed."
+    ),
+    tools=[turn_on_lights, turn_off_lights]
+)
 
 answer_question = Agent(
     model=llm_client,
