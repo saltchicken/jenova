@@ -1,3 +1,7 @@
+"""
+Client script for interacting with the Jenova AI Assistant via the ADK API.
+"""
+
 import argparse
 import json
 import sys
@@ -12,17 +16,21 @@ DEFAULT_BASE_URL = "http://localhost:8000"
 
 
 class SessionManager:
+    """Manages sessions for the client."""
 
     def __init__(self,
                  base_url: str = DEFAULT_BASE_URL,
                  user_id: str = DEFAULT_USER_ID):
+        """Initializes the session manager."""
         self.base_url = base_url
         self.prefix = f"{self.base_url}/apps/{APP_NAME}/users/{user_id}/sessions"
 
     def list(self) -> dict | list:
+        """Lists all sessions for the user."""
         return httpx.get(self.prefix).json()
 
     def get(self, session_id: str) -> Optional[dict]:
+        """Gets a session by ID."""
         response = httpx.get(f"{self.prefix}/{session_id}")
         if response.status_code == 404:
             return None
@@ -34,13 +42,16 @@ class SessionManager:
     def create(self,
                session_id: Optional[str] = None,
                data: Optional[dict] = None) -> dict:
+        """Creates a new session."""
         url = f"{self.prefix}/{session_id}" if session_id else self.prefix
         return httpx.post(url, json=data or {}).json()
 
     def update(self, session_id: str, data: dict) -> dict:
+        """Updates a session."""
         return httpx.patch(f"{self.prefix}/{session_id}", json=data).json()
 
     def delete(self, session_id: str) -> dict:
+        """Deletes a session."""
         return httpx.delete(f"{self.prefix}/{session_id}").json()
 
 
@@ -57,8 +68,59 @@ def get_text_from_event(event_data: dict) -> str | None:
     return None
 
 
+def _handle_streaming(url: str, payload: dict) -> None:
+    """Handles a streaming chat request."""
+    streamed_nodes = set()
+    current_printing_node = None  # Track which node is outputting
+
+    with httpx.Client() as client:
+        with connect_sse(client, "POST", url, json=payload,
+                         timeout=None) as event_source:
+            for sse in event_source.iter_sse():
+                data = json.loads(sse.data)
+
+                node_name = data.get("author")
+                is_partial = data.get("partial")
+                text_chunk = get_text_from_event(data)
+
+                if not node_name or not text_chunk:
+                    continue
+
+                # If a different node starts talking, print a new prefix
+                if current_printing_node != node_name:
+                    if current_printing_node is not None:
+                        print()  # Add a newline to close out the previous node
+                    print(f"[{node_name}]: ", end="", flush=True)
+                    current_printing_node = node_name
+
+                if is_partial:
+                    streamed_nodes.add(node_name)
+                    print(text_chunk, end="", flush=True)
+                elif not is_partial and node_name not in streamed_nodes:
+                    # ONLY print final events if we didn't already stream them
+                    print(text_chunk, end="", flush=True)
+
+
+def _handle_blocking(url: str, payload: dict) -> None:
+    """Handles a blocking chat request."""
+    response = httpx.post(url, json=payload, timeout=None)
+    response.raise_for_status()
+
+    data = response.json()
+    if isinstance(data, list):
+        for event in data:
+            node_name = event.get("author")
+            text_chunk = get_text_from_event(event)
+
+            if text_chunk and node_name:
+                print(f"[{node_name}]: {text_chunk}")
+    else:
+        print("Unexpected response format:", data)
+
+
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
          user_id: str):
+    """Sends a chat message to the agent."""
     endpoint = "/run" if is_blocking else "/run_sse"
     url = f"{base_url}{endpoint}"
 
@@ -77,57 +139,9 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
 
     try:
         if not is_blocking:
-            # --- STREAMING LOGIC ---
-            streamed_nodes = set()
-            current_printing_node = None  # Track which node is outputting
-
-            with httpx.Client() as client:
-                with connect_sse(client,
-                                 "POST",
-                                 url,
-                                 json=payload,
-                                 timeout=None) as event_source:
-                    for sse in event_source.iter_sse():
-                        data = json.loads(sse.data)
-
-                        node_name = data.get("author")
-                        is_partial = data.get("partial")
-                        text_chunk = get_text_from_event(data)
-
-                        if not node_name or not text_chunk:
-                            continue
-
-                        # If a different node starts talking, print a new prefix
-                        if current_printing_node != node_name:
-                            if current_printing_node is not None:
-                                print(
-                                )  # Add a newline to close out the previous node
-                            print(f"[{node_name}]: ", end="", flush=True)
-                            current_printing_node = node_name
-
-                        if is_partial:
-                            streamed_nodes.add(node_name)
-                            print(text_chunk, end="", flush=True)
-                        elif not is_partial and node_name not in streamed_nodes:
-                            # ONLY print final events if we didn't already stream them
-                            print(text_chunk, end="", flush=True)
-
+            _handle_streaming(url, payload)
         else:
-            # --- BLOCKING LOGIC ---
-            response = httpx.post(url, json=payload, timeout=None)
-            response.raise_for_status()
-
-            data = response.json()
-            if isinstance(data, list):
-                for event in data:
-                    node_name = event.get("author")
-                    text_chunk = get_text_from_event(event)
-
-                    if text_chunk and node_name:
-                        print(f"[{node_name}]: {text_chunk}")
-            else:
-                print("Unexpected response format:", data)
-
+            _handle_blocking(url, payload)
     except httpx.RequestError as exc:
         print(f"\n[Error] Unable to connect to server: {exc}")
         sys.exit(1)
@@ -142,6 +156,7 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
 
 
 def main():
+    """Main entry point for the client application."""
     parser = argparse.ArgumentParser(
         description="Chat with Jenova AI Assistant")
     parser.add_argument("--url",
