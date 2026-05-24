@@ -26,7 +26,7 @@ class SessionManager:
         response = httpx.get(f"{self.prefix}/{session_id}")
         if response.status_code == 404:
             return None
-        
+
         # Raise an exception for any other HTTP errors (e.g., 500)
         response.raise_for_status()
         return response.json()
@@ -100,7 +100,8 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                         # If a different node starts talking, print a new prefix
                         if current_printing_node != node_name:
                             if current_printing_node is not None:
-                                print() # Add a newline to close out the previous node
+                                print(
+                                )  # Add a newline to close out the previous node
                             print(f"[{node_name}]: ", end="", flush=True)
                             current_printing_node = node_name
 
@@ -121,7 +122,7 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                 for event in data:
                     node_name = event.get("author")
                     text_chunk = get_text_from_event(event)
-                    
+
                     if text_chunk and node_name:
                         print(f"[{node_name}]: {text_chunk}")
             else:
@@ -157,7 +158,7 @@ def main():
     chat_parser = subparsers.add_parser("chat",
                                         help="Send a message to the agent")
     chat_parser.add_argument("prompt", type=str, help="The message to send")
-    
+
     # REQUIRE the session-id flag without a default
     chat_parser.add_argument("--session-id",
                              required=True,
@@ -199,13 +200,19 @@ def main():
         try:
             session = manager.get(args.session_id)
             if session is None:
-                print(f"[Info] Session '{args.session_id}' not found. Creating a new one...")
+                print(
+                    f"[Info] Session '{args.session_id}' not found. Creating a new one..."
+                )
                 manager.create(args.session_id)
         except httpx.RequestError as exc:
-            print(f"\n[Error] Unable to connect to server to check session: {exc}")
+            print(
+                f"\n[Error] Unable to connect to server to check session: {exc}"
+            )
             sys.exit(1)
         except httpx.HTTPStatusError as exc:
-            print(f"\n[Error] Failed to get session: {exc.response.status_code} - {exc.response.text}")
+            print(
+                f"\n[Error] Failed to get session: {exc.response.status_code} - {exc.response.text}"
+            )
             sys.exit(1)
 
         chat(user_input=args.prompt,
