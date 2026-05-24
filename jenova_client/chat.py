@@ -35,22 +35,20 @@ def parse_event_parts(event_data: dict) -> tuple[str, str, str]:
             func_data = part["functionCall"]
             name = func_data.get("name", "UnknownTool")
             args = func_data.get("args", {})
-            tool_chunks.append(f"\n⚡ [Executing Tool: {name} | Args: {args}] ⚡")
+            tool_chunks.append(f"⚡ [Executing Tool: {name} | Args: {args}] ⚡")
 
         # Capture the result returning from the tool
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
             name = func_data.get("name", "UnknownTool")
             result = func_data.get("response", {}).get("result", "")
-            tool_chunks.append(f"\n✅ [Tool Result ({name}): {result}] ✅")
+            tool_chunks.append(f"✅ [Tool Result ({name}): {result}] ✅")
 
     return "".join(spoken_chunks), "".join(tool_chunks), "".join(thought_chunks)
 
 
 def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
-    streamed_nodes = set()
-    current_printing_node = None
 
     with httpx.Client() as client:
         with connect_sse(client, "POST", url, json=payload, timeout=None) as event_source:
@@ -67,26 +65,20 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 is_internal = node_name.startswith("_")
 
                 # Fetch separated data payloads
-                spoken_text, _tool_log, _thought_text = parse_event_parts(data)
-
-                # ==========================================
-                # 1. TERMINAL UI: Formatting and Logging
-                # ==========================================
-                if current_printing_node != node_name:
-                    # if current_printing_node is not None:
-                    #     logger.opt(raw=True).info("\n")
-
-                    # logger.opt(raw=True).info(f"[{node_name}]: ")
-                    current_printing_node = node_name
-                    streamed_nodes.clear()
+                spoken_text, tool_log, thought_text = parse_event_parts(data)
 
                 if is_partial:
-                    streamed_nodes.add(node_name)
                     if spoken_text and not is_internal:
                         logger.opt(raw=True).info(spoken_text)
                 else:
-                    if spoken_text and node_name not in streamed_nodes and not is_internal:
-                        logger.opt(raw=True).info(spoken_text)
+                    if spoken_text and is_internal:
+                        logger.debug(spoken_text)
+                    if tool_log:
+                        logger.debug(tool_log)
+                    if thought_text:
+                        logger.debug(thought_text)
+
+
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -105,10 +97,18 @@ def _handle_blocking(url: str, payload: dict) -> None:
             is_internal = node_name.startswith("_")
 
             # Fetch separated data payloads
-            spoken_text, _tool_log, _thought_text = parse_event_parts(event)
+            spoken_text, tool_log, thought_text = parse_event_parts(event)
 
             if spoken_text and not is_internal:
                 logger.opt(raw=True).info(spoken_text)
+            if spoken_text and is_internal:
+                logger.debug(spoken_text)
+            if tool_log:
+                logger.debug(tool_log)
+            if thought_text:
+                logger.debug(thought_text)
+
+            
 
     else:
         logger.warning(f"Unexpected response format: {data}")
