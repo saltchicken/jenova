@@ -69,7 +69,7 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
         "streaming": not is_blocking
     }
 
-    print(f"\nUser:  {user_input}")
+    # print(f"\nUser:  {user_input}")
 
     try:
         if not is_blocking:
@@ -107,8 +107,6 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                             # ONLY print final events if we didn't already stream them
                             print(text_chunk, end="", flush=True)
 
-            print("\n")
-
         else:
             # --- BLOCKING LOGIC ---
             response = httpx.post(url, json=payload, timeout=None)
@@ -124,7 +122,6 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
                         print(f"[{node_name}]: {text_chunk}")
             else:
                 print("Unexpected response format:", data)
-            print("\n")
 
     except httpx.RequestError as exc:
         print(f"\n[Error] Unable to connect to server: {exc}")
