@@ -10,4 +10,5 @@ from .classifiers import IntentCategory
 from .classifiers import QuestionCategory
 from .experts import general_expert
 from .experts import math_expert
+from .experts import search_agent
 from .experts import tech_expert

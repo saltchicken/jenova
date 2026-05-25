@@ -15,6 +15,7 @@ dependencies = [
     "loguru",
     "ddgs",
     "beautifulsoup4",
+    "requests",
 ]
 
 [project.optional-dependencies]

@@ -20,7 +20,7 @@ class IntentCategory(BaseModel):
 
 class QuestionCategory(BaseModel):
     """Schema for categorizing the type of question."""
-    category: Literal["tech", "math", "general"]
+    category: Literal["tech", "math", "general", "search"]
 
 
 classify_intent = Agent(
@@ -29,7 +29,7 @@ classify_intent = Agent(
     instruction=
     ("You are a routing assistant. Based on the input, decide the intent: {input}\n"
      "- Choose 'action' if they are requesting you to control devices (like lights).\n"
-     "- Choose 'question' if they are asking a question.\n"
+     "- Choose 'question' if they are asking a question (includes web searches, math, tech questions).\n"
      "- Choose 'other' for general conversation, sharing personal facts, or asking you to remember something.\n"
      "CRITICAL: You MUST respond with ONLY a valid JSON object containing a single key 'intent'. "
      "Example: {\"intent\": \"action\"}"),
@@ -44,6 +44,7 @@ classify_question = Agent(
     ("You are a sub-routing assistant. Categorize the user's question: {input}\n"
      "- Choose 'tech' if it's about programming, software, or operating systems.\n"
      "- Choose 'math' if it involves calculations or mathematical concepts.\n"
+     "- Choose 'search' if it requires looking up current information, facts, or news on the web.\n"
      "- Choose 'general' for anything else.\n"
      "CRITICAL: You MUST respond with ONLY a valid JSON object. Example: {\"category\": \"tech\"}"
     ),

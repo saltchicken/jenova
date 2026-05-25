@@ -5,13 +5,37 @@ Domain-specific expert subagents.
 from google.adk import Agent
 from google.adk.models.lite_llm import LiteLlm
 
-import uuid, httpx, json
-
 # DEFAULT_MODEL = "ollama_chat/devstral-small-2"
 DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
 llm_client = LiteLlm(model=DEFAULT_MODEL)
 
-from jenova.tools import ask_search_agent
+from jenova.tools import search_duckduckgo
+from jenova.tools import scrape_website
+
+
+search_agent = Agent(
+    model=llm_client,
+    name="search_agent",
+    instruction=(
+        "You are an autonomous research compiler working in a machine-to-machine pipeline. \n"
+        "The current date and time is {current_date}.\n\n"
+        "The user's input: {input}\n\n"
+        "Your workflow:\n"
+        "1. Determine the proper research query from the user's input.\n"
+        "2. Use the `search_duckduckgo` tool to find the most relevant sources.\n"
+        "3. Use the `scrape_website` tool to extract the raw text from the most promising URLs.\n"
+        "4. Synthesize the findings into a strict JSON payload.\n\n"
+        "You must output ONLY valid JSON. Do not include markdown code blocks or conversational text.\n"
+        "Your JSON must follow this exact schema:\n"
+        "{\n"
+        "  \"topic\": \"The exact topic researched\",\n"
+        "  \"executive_summary\": \"A dense, high-level summary of the findings\",\n"
+        "  \"key_data_points\": [\"fact 1\", \"fact 2\", \"fact 3\"],\n"
+        "  \"sources_used\": [\"url1\", \"url2\"]\n"
+        "}"
+    ),
+    tools=[search_duckduckgo, scrape_website],
+)
 
 
 tech_expert = Agent(
@@ -44,12 +68,5 @@ general_expert = Agent(
      "System Context:\n{user_context}\n"
      "The current date and time is {current_date}.\n\n"
      "Answer the following general question: {input}\n\n"
-     "If you need current information, facts, or news, use the ask_search_agent tool.\n"
-     "CRITICAL SEARCH RULES:\n"
-     "1. Break complex questions into concise, keyword-heavy search queries.\n"
-     "2. Do not use full sentences for search queries. (e.g., Use 'France capital population current' instead of 'What is the population of France').\n\n"
-     "IMPORTANT: Once you have gathered enough information from the search results, "
-     "you MUST stop calling tools. Synthesize the results and reply directly to the user.\n\n"
      "Here is the conversation history:\n{history?}"),
-    tools=[ask_search_agent],
 )

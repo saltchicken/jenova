@@ -1,68 +1,60 @@
 """
-Tools for external agent delegation and searching.
+Tools for searching the web and scraping content.
 """
 
-import uuid
-import httpx
 import json
+import requests
+from bs4 import BeautifulSoup
+from ddgs import DDGS
 
-def ask_search_agent(task_description: str) -> str:
+
+def search_duckduckgo(query: str) -> str:
     """
-    Delegates a task to Search Agent via the standard A2A JSON-RPC Protocol (v0.3.0).
+    Searches the open web for a given query to find relevant URLs.
+    
+    Args:
+        query: The specific topic or question to research.
+        
+    Returns:
+        A JSON string containing the title, URL, and a brief snippet of the top results.
     """
-    print(
-        f"\n[Orchestrator is calling Search Agent via A2A with task: '{task_description}']..."
-    )
-
-    url = "http://localhost:8001/"
-
-    # Construct the strict A2A Protocol JSON-RPC Payload
-    payload = {
-        "jsonrpc": "2.0",
-        "id": str(uuid.uuid4()),
-        "method": "message/send",
-        "params": {
-            "message": {
-                "kind": "message",
-                "contextId": "a2a_shared_session",
-                "messageId": str(uuid.uuid4()),
-                "role": "user",
-                "parts": [{
-                    "kind": "text",
-                    "text": task_description
-                }]
-            }
-        }
-    }
-
     try:
-        response = httpx.post(url, json=payload, timeout=30.0)
+        # Fetch top 3 results to keep context windows manageable
+        results = DDGS().text(query, max_results=3)
+        return json.dumps(list(results))
+    except Exception as e:
+        return f"Search failed: {str(e)}"
+
+
+def scrape_website(url: str) -> str:
+    """
+    Scrapes a webpage and intelligently extracts the core textual content, 
+    ignoring navigation menus, footers, and scripts.
+    
+    Args:
+        url: The exact URL to scrape.
+        
+    Returns:
+        The cleaned, extracted raw text from the webpage.
+    """
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
-        data = response.json()
 
-        if "error" in data:
-            return f"Search Agent A2A Error: {data['error']}"
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-        result_data = data.get("result", {})
-        parts = []
+        # Strip out noisy HTML elements
+        for element in soup(
+            ["script", "style", "nav", "footer", "header", "aside"]):
+            element.decompose()
 
-        if "artifacts" in result_data and result_data["artifacts"]:
-            parts = result_data["artifacts"][0].get("parts", [])
-        elif "history" in result_data and result_data["history"]:
-            parts = result_data["history"][-1].get("parts", [])
-        elif "message" in result_data:
-            parts = result_data["message"].get("parts", [])
-        else:
-            parts = result_data.get("parts", [])
+        # Target content-heavy tags
+        text_elements = soup.find_all(['p', 'h1', 'h2', 'h3', 'li'])
+        extracted_text = " ".join(
+            [elem.get_text(strip=True) for elem in text_elements])
 
-        # Extract text, specifically ignoring internal "adk_thought" processes
-        final_answer = "".join(
-            part.get("text", "") 
-            for part in parts 
-            if "text" in part and not part.get("metadata", {}).get("adk_thought")
-        )
-
-        return final_answer.strip() or "Search Agent successfully completed the action but returned no text."
-
-    except Exception as exc:
-        return f"A2A System Error: {exc}"
+        # Truncate to the first 5000 characters to prevent LLM context overflow
+        return extracted_text[:5000]
+    except Exception as e:
+        return f"Scraping failed for {url}: {str(e)}"
