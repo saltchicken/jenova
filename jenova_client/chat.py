@@ -98,6 +98,9 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 chunks = parse_event_chunks(data)
 
                 for chunk in chunks:
+                    if chunk.chunk_type in ("spoken", "thought") and not is_partial:
+                        continue
+
                     # Log the node name and chunk type whenever either changes
                     if current_node != chunk.node_name or current_chunk_type != chunk.chunk_type:
                         current_node = chunk.node_name
