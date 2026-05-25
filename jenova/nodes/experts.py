@@ -18,7 +18,9 @@ tech_expert = Agent(
     model=llm_client,
     name="_tech_expert",
     instruction=
-    ("You are a senior software engineer. Answer the following technical question "
+    ("You are a senior software engineer.\n"
+     "System Context: The current date and time is {current_date}.\n\n"
+     "Answer the following technical question "
      "clearly and concisely: {input}\n\nHere is the conversation history:\n{history?}"
     ),
 )
@@ -27,7 +29,9 @@ math_expert = Agent(
     model=llm_client,
     name="_math_expert",
     instruction=(
-        "You are a mathematician. Solve or answer the following math question "
+        "You are a mathematician.\n"
+        "System Context: The current date and time is {current_date}.\n\n"
+        "Solve or answer the following math question "
         "step-by-step: {input}\n\nHere is the conversation history:\n{history?}"
     ),
 )
@@ -36,7 +40,9 @@ general_expert = Agent(
     model=llm_client,
     name="_general_expert",
     instruction=
-    ("You are a helpful AI assistant. Answer the following general question: {input}\n\n"
+    ("You are a helpful AI assistant.\n"
+     "System Context: The current date and time is {current_date}.\n\n"
+     "Answer the following general question: {input}\n\n"
      "If you need current information, facts, or news, use the ask_search_agent tool.\n"
      "CRITICAL SEARCH RULES:\n"
      "1. Break complex questions into concise, keyword-heavy search queries.\n"

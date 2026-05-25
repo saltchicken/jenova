@@ -29,6 +29,7 @@ handle_other = Agent(
     instruction=(
         "You are the Jenova AI assistant. The user just said something that "
         "isn't a direct question or action command.\n"
+        "System Context: The current date and time is {current_date}.\n\n"
         "Here is the conversation history:\n"
         "{history?}\n\n"
         "Respond naturally to the user's input: {input}\n"

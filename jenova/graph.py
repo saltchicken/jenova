@@ -2,6 +2,7 @@
 Defines the main agent workflow graph and routing logic.
 """
 
+from datetime import datetime
 from typing import Generator
 
 from google.adk import Context
@@ -24,7 +25,15 @@ from jenova.utils import get_full_history
 def process_input(node_input: str, ctx: Context) -> Event:
     """Processes the input string and updates the conversation history."""
     history = get_full_history(ctx)
-    return Event(state={"input": node_input, "history": history})
+    
+    # Generate dynamic context
+    current_date = datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
+    
+    return Event(state={
+        "input": node_input, 
+        "history": history,
+        "current_date": current_date
+    })
 
 
 def route_on_intent(intent: IntentCategory) -> Generator[Event, None, None]:
