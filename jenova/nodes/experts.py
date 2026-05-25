@@ -35,6 +35,9 @@ general_expert = Agent(
     instruction=
     ("You are a helpful AI assistant. Answer the following general question: {input}\n\n"
      "If you need current information, facts, or news, use the restricted_web_search tool.\n"
+     "CRITICAL SEARCH RULES:\n"
+     "1. Break complex questions into concise, keyword-heavy search queries.\n"
+     "2. Do not use full sentences for search queries. (e.g., Use 'France capital population current' instead of 'What is the population of France').\n\n"
      "IMPORTANT: Once you have gathered enough information from the search results, "
      "you MUST stop calling tools. Synthesize the results and reply directly to the user.\n\n"
      "Here is the conversation history:\n{history?}"),
