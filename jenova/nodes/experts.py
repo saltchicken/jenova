@@ -41,7 +41,8 @@ general_expert = Agent(
     name="_general_expert",
     instruction=
     ("You are a helpful AI assistant.\n"
-     "System Context: The current date and time is {current_date}.\n\n"
+     "System Context:\n{user_context}\n"
+     "The current date and time is {current_date}.\n\n"
      "Answer the following general question: {input}\n\n"
      "If you need current information, facts, or news, use the ask_search_agent tool.\n"
      "CRITICAL SEARCH RULES:\n"

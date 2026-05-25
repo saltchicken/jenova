@@ -20,6 +20,7 @@ from jenova.nodes import take_action
 from jenova.nodes import tech_expert
 from jenova.nodes import tts_formatter
 from jenova.utils import get_full_history
+from jenova.memory import load_memories
 
 
 def process_input(node_input: str, ctx: Context) -> Event:
@@ -29,10 +30,20 @@ def process_input(node_input: str, ctx: Context) -> Event:
     # Generate dynamic context
     current_date = datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
     
+    # Load all saved memories
+    saved_facts = load_memories()
+    
+    # Format them into a readable string for the LLM
+    if saved_facts:
+        user_context = "Here are known facts about the user:\n- " + "\n- ".join(saved_facts)
+    else:
+        user_context = "No personal facts are known about the user yet."
+
     return Event(state={
         "input": node_input, 
         "history": history,
-        "current_date": current_date
+        "current_date": current_date,
+        "user_context": user_context
     })
 
 

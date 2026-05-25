@@ -28,9 +28,9 @@ classify_intent = Agent(
     name="_classify_intent",
     instruction=
     ("You are a routing assistant. Based on the input, decide the intent: {input}\n"
-     "- Choose 'action' if they requesting for you to take an action.\n"
+     "- Choose 'action' if they are requesting you to control devices (like lights).\n"
      "- Choose 'question' if they are asking a question.\n"
-     "- Choose 'other' for anything else.\n"
+     "- Choose 'other' for general conversation, sharing personal facts, or asking you to remember something.\n"
      "CRITICAL: You MUST respond with ONLY a valid JSON object containing a single key 'intent'. "
      "Example: {\"intent\": \"action\"}"),
     output_schema=IntentCategory,

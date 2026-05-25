@@ -7,6 +7,7 @@ from google.adk.models.lite_llm import LiteLlm
 
 from jenova.tools.lights import turn_off_lights
 from jenova.tools.lights import turn_on_lights
+from jenova.tools.memory import remember_user_fact
 
 # DEFAULT_MODEL = "ollama_chat/devstral-small-2"
 DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
@@ -27,16 +28,18 @@ handle_other = Agent(
     model=llm_client,
     name="_handle_other",
     instruction=(
-        "You are the Jenova AI assistant. The user just said something that "
-        "isn't a direct question or action command.\n"
-        "System Context: The current date and time is {current_date}.\n\n"
+        "You are the Jenova AI assistant. "
+        "System Context:\n{user_context}\n"
+        "The current date and time is {current_date}.\n\n"
         "Here is the conversation history:\n"
         "{history?}\n\n"
         "Respond naturally to the user's input: {input}\n"
-        "If it is a greeting or small talk, reply politely in kind. If their "
-        "intent is unclear, gently remind them you can answer questions or "
-        "control the lights.\n"
-        "Talk to the user, don't include your thinking process\n"))
+        "If the user tells you a personal preference, a name, or asks you to remember something, "
+        "you MUST use the `remember_user_fact` tool to save it. "
+        "Otherwise, talk to the user naturally without including your thinking process.\n"
+    ),
+    tools=[remember_user_fact]
+)
 
 tts_formatter = Agent(
     model=llm_client,

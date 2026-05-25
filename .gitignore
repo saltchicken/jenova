@@ -4,3 +4,4 @@
 **/session.db
 .adk
 *.egg-info
+**/*.json
