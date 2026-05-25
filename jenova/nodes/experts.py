@@ -11,74 +11,7 @@ import uuid, httpx, json
 DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
 llm_client = LiteLlm(model=DEFAULT_MODEL)
 
-
-def ask_search_agent(task_description: str) -> str:
-    """
-    Delegates a task to Search Agent via the standard A2A JSON-RPC Protocol (v0.3.0).
-    """
-    print(
-        f"\n[Orchestrator is calling Search Agent via A2A with task: '{task_description}']..."
-    )
-
-    url = "http://localhost:8001/"
-
-    # 3. Construct the strict A2A Protocol JSON-RPC Payload
-    payload = {
-        "jsonrpc": "2.0",
-        "id": str(uuid.uuid4()),
-        "method": "message/send",  # The official A2A v0.3.0 method
-        "params": {
-            "message": {
-                "kind": "message",
-                "contextId":
-                    "a2a_shared_session",  # Ensures Jenova remembers the thread
-                "messageId": str(uuid.uuid4()),
-                "role": "user",
-                "parts": [{
-                    "kind": "text",
-                    "text": task_description
-                }]
-            }
-        }
-    }
-
-    try:
-        response = httpx.post(url, json=payload, timeout=30.0)
-        response.raise_for_status()
-
-        # 4. Parse the standard A2A JSON-RPC Response
-        data = response.json()
-
-        # print(f"\n[RAW A2A RESPONSE from Search Agent]:\n{json.dumps(data, indent=2)}\n")
-
-        if "error" in data:
-            return f"Search Agent A2A Error: {data['error']}"
-
-        result_data = data.get("result", {})
-        parts = []
-
-        # The ADK returns a 'Task' object when an agent completes a workflow.
-        # Check 'artifacts' first, then fallback to the last message in 'history'.
-        if "artifacts" in result_data and result_data["artifacts"]:
-            parts = result_data["artifacts"][0].get("parts", [])
-        elif "history" in result_data and result_data["history"]:
-            parts = result_data["history"][-1].get("parts", [])
-        elif "message" in result_data:
-            parts = result_data["message"].get("parts", [])
-        else:
-            parts = result_data.get("parts", [])
-
-        # Extract text, specifically ignoring internal "adk_thought" processes
-        final_answer = "".join(
-            part.get("text", "") 
-            for part in parts 
-            if "text" in part and not part.get("metadata", {}).get("adk_thought")
-        )
-
-        return final_answer.strip() or "Search Agent successfully completed the action but returned no text."
-
-    except Exception as exc:
-        return f"A2A System Error: {exc}"
+from jenova.tools import ask_search_agent
 
 
 tech_expert = Agent(
