@@ -9,7 +9,6 @@ from google.adk.models.lite_llm import LiteLlm
 DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
 llm_client = LiteLlm(model=DEFAULT_MODEL)
 
-
 tech_expert = Agent(
     model=llm_client,
     name="_tech_expert",
