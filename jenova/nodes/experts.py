@@ -12,7 +12,7 @@ llm_client = LiteLlm(model=DEFAULT_MODEL)
 
 tech_expert = Agent(
     model=llm_client,
-    name="tech_expert",
+    name="_tech_expert",
     instruction=
     ("You are a senior software engineer. Answer the following technical question "
      "clearly and concisely: {input}\n\nHere is the conversation history:\n{history?}"
@@ -21,7 +21,7 @@ tech_expert = Agent(
 
 math_expert = Agent(
     model=llm_client,
-    name="math_expert",
+    name="_math_expert",
     instruction=(
         "You are a mathematician. Solve or answer the following math question "
         "step-by-step: {input}\n\nHere is the conversation history:\n{history?}"
@@ -30,7 +30,7 @@ math_expert = Agent(
 
 general_expert = Agent(
     model=llm_client,
-    name="general_expert",
+    name="_general_expert",
     instruction=
     ("You are a helpful AI assistant. Answer the following general question: {input}\n\n"
      "Here is the conversation history:\n{history?}"),
