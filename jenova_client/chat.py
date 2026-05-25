@@ -2,8 +2,10 @@
 Chat interaction handling for the Jenova client.
 """
 
+from dataclasses import dataclass
 import json
 import sys
+from typing import Literal
 
 import httpx
 from httpx_sse import connect_sse
@@ -12,44 +14,73 @@ from loguru import logger
 from jenova_client.constants import APP_NAME
 
 
-def parse_event_parts(event_data: dict) -> tuple[str, str, str]:
+@dataclass
+class ParsedChunk:
+    """Structured representation of a parsed event chunk."""
+    node_name: str
+    chunk_type: Literal["spoken", "thought", "tool_call", "tool_result"]
+    text: str
+    is_internal: bool
+
+
+def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
     """
-    Parses event payload and separates spoken text, tool logs, and agent thoughts.
-    Returns:
-        tuple[str, str, str]: (spoken_text, tool_log, thought_text)
+    Parses an event payload into an ordered list of strongly-typed chunks.
     """
+    node_name = event_data.get("author")
+    if not node_name:
+        return []
+
+    is_internal = node_name.startswith("_")
     parts = event_data.get("content", {}).get("parts", [])
-    spoken_chunks = []
-    tool_chunks = []
-    thought_chunks = []
+    chunks = []
 
     for part in parts:
         if "text" in part:
-            if part.get("thought", False):
-                thought_chunks.append(part["text"])
-            else:
-                spoken_chunks.append(part["text"])
+            chunk_type = "thought" if part.get("thought", False) else "spoken"
+            chunks.append(
+                ParsedChunk(node_name, chunk_type, part["text"], is_internal))
 
-        # Capture the tool execution request
         elif "functionCall" in part:
             func_data = part["functionCall"]
             name = func_data.get("name", "UnknownTool")
             args = func_data.get("args", {})
-            tool_chunks.append(f"⚡ [Executing Tool: {name} | Args: {args}] ⚡")
+            text = f"⚡ [Executing Tool: {name} | Args: {args}] ⚡"
+            chunks.append(ParsedChunk(node_name, "tool_call", text,
+                                      is_internal))
 
-        # Capture the result returning from the tool
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
             name = func_data.get("name", "UnknownTool")
             result = func_data.get("response", {}).get("result", "")
-            tool_chunks.append(f"✅ [Tool Result ({name}): {result}] ✅")
+            text = f"✅ [Tool Result ({name}): {result}] ✅"
+            chunks.append(
+                ParsedChunk(node_name, "tool_result", text, is_internal))
 
-    return "".join(spoken_chunks), "".join(tool_chunks), "".join(thought_chunks)
+    return chunks
+
+
+def _log_chunk(chunk: ParsedChunk) -> None:
+    """Helper utility to uniformly format and log parsed chunks."""
+    if chunk.chunk_type == "spoken":
+        if chunk.is_internal:
+            logger.opt(raw=True,
+                       colors=True).debug("<light-blue>{}</light-blue>",
+                                          chunk.text)
+        else:
+            logger.opt(raw=True, colors=True).info(chunk.text)
+
+    elif chunk.chunk_type == "thought":
+        logger.opt(raw=True, colors=True).debug("<magenta>{}</magenta>",
+                                                chunk.text)
+
+    elif chunk.chunk_type in ("tool_call", "tool_result"):
+        logger.opt(raw=True, colors=True).debug("<yellow>{}</yellow>",
+                                                chunk.text)
 
 
 def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
-
     current_node = None
 
     with httpx.Client() as client:
@@ -58,41 +89,32 @@ def _handle_streaming(url: str, payload: dict) -> None:
             for sse in event_source.iter_sse():
                 data = json.loads(sse.data)
 
-                node_name = data.get("author")
-                is_partial = data.get("partial")
-
-                if not node_name:
+                if "author" not in data:
                     logger.warning("node_name was not successfully parsed")
                     continue
 
-                is_internal = node_name.startswith("_")
+                is_partial = data.get("partial", False)
+                chunks = parse_event_chunks(data)
 
-                # Fetch separated data payloads
-                spoken_text, tool_log, thought_text = parse_event_parts(data)
-
-                if current_node != node_name:
-                    current_node = node_name
-                    if spoken_text or tool_log or thought_text:
+                for chunk in chunks:
+                    # Log the node name whenever it changes
+                    if current_node != chunk.node_name:
+                        current_node = chunk.node_name
                         logger.opt(raw=True,
                                    colors=True).debug("\n<blue>[{}]</blue>\n",
-                                                      node_name)
-                    # else:
-                    #     logger.opt(raw=True, colors=True).debug("This node hasn't been captured")
+                                                      current_node)
 
-                if is_partial:
-                    if spoken_text and not is_internal:
-                        logger.opt(raw=True, colors=True).info(spoken_text)
-                    if spoken_text and is_internal:
-                        logger.opt(raw=True, colors=True).debug(
-                            "<light-blue>{}</light-blue>", spoken_text)
-                    if tool_log:
-                        logger.opt(raw=True,
-                                   colors=True).debug("<yellow>{}</yellow>",
-                                                      tool_log)
-                    if thought_text:
-                        logger.opt(raw=True,
-                                   colors=True).debug("<magenta>{}</magenta>",
-                                                      thought_text)
+                    # Handle streaming vs. discrete chunks
+                    if chunk.chunk_type in ("spoken", "thought"):
+                        # Streamed text should only print partials to avoid
+                        # duplicating the final accumulated message
+                        if is_partial:
+                            _log_chunk(chunk)
+
+                    elif chunk.chunk_type in ("tool_call", "tool_result"):
+                        # Tools are discrete events and typically do not carry the partial flag
+                        if not is_partial:
+                            _log_chunk(chunk)
 
 
 def _handle_blocking(url: str, payload: dict) -> None:
@@ -101,37 +123,23 @@ def _handle_blocking(url: str, payload: dict) -> None:
     response.raise_for_status()
 
     data = response.json()
+    current_node = None
+
     if isinstance(data, list):
         for event in data:
-            node_name = event.get("author")
-
-            if not node_name:
+            if "author" not in event:
                 continue
 
-            is_internal = node_name.startswith("_")
+            chunks = parse_event_chunks(event)
 
-            # Fetch separated data payloads
-            spoken_text, tool_log, thought_text = parse_event_parts(event)
+            for chunk in chunks:
+                if current_node != chunk.node_name:
+                    current_node = chunk.node_name
+                    logger.opt(raw=True,
+                               colors=True).debug("\n<blue>[{}]</blue>\n",
+                                                  current_node)
 
-            if spoken_text or tool_log or thought_text:
-                logger.opt(raw=True, colors=True).debug("\n<blue>[{}]</blue>\n",
-                                                        node_name)
-            # else:
-            #     logger.opt(raw=True, colors=True).debug("This node hasn't been captured")
-
-            if spoken_text and not is_internal:
-                logger.opt(raw=True, colors=True).info(spoken_text)
-            if spoken_text and is_internal:
-                logger.opt(raw=True,
-                           colors=True).debug("<light-blue>{}</light-blue>",
-                                              spoken_text)
-            if tool_log:
-                logger.opt(raw=True, colors=True).debug("<yellow>{}</yellow>",
-                                                        tool_log)
-            if thought_text:
-                logger.opt(raw=True, colors=True).debug("<magenta>{}</magenta>",
-                                                        thought_text)
-
+                _log_chunk(chunk)
     else:
         logger.warning(f"Unexpected response format: {data}")
 
@@ -139,7 +147,6 @@ def _handle_blocking(url: str, payload: dict) -> None:
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
          user_id: str):
     """Sends a chat message to the agent."""
-
     endpoint = "/run" if is_blocking else "/run_sse"
     url = f"{base_url}{endpoint}"
 
