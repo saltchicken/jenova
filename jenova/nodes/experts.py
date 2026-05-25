@@ -5,7 +5,7 @@ Domain-specific expert subagents.
 from google.adk import Agent
 from google.adk.models.lite_llm import LiteLlm
 
-from jenova.tools.search import WebSearchTool
+from jenova.tools.search import restricted_web_search
 
 # DEFAULT_MODEL = "ollama_chat/devstral-small-2"
 DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
@@ -28,8 +28,6 @@ math_expert = Agent(
         "step-by-step: {input}\n\nHere is the conversation history:\n{history?}"
     ),
 )
-
-restricted_web_search = WebSearchTool(max_runs=1)
 
 general_expert = Agent(
     model=llm_client,
