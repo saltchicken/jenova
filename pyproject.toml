@@ -13,6 +13,7 @@ dependencies = [
     "httpx",
     "httpx-sse",
     "loguru",
+    "ddgs",
 ]
 
 [project.optional-dependencies]
