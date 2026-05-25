@@ -82,6 +82,7 @@ def _log_chunk(chunk: ParsedChunk) -> None:
 def _handle_streaming(url: str, payload: dict) -> None:
     """Handles a streaming chat request."""
     current_node = None
+    current_chunk_type = None
 
     with httpx.Client() as client:
         with connect_sse(client, "POST", url, json=payload,
@@ -97,12 +98,13 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 chunks = parse_event_chunks(data)
 
                 for chunk in chunks:
-                    # Log the node name whenever it changes
-                    if current_node != chunk.node_name:
+                    # Log the node name and chunk type whenever either changes
+                    if current_node != chunk.node_name or current_chunk_type != chunk.chunk_type:
                         current_node = chunk.node_name
+                        current_chunk_type = chunk.chunk_type
                         logger.opt(raw=True,
-                                   colors=True).debug("\n<blue>[{}]</blue>\n",
-                                                      current_node)
+                                   colors=True).debug("\n<blue>[{} | {}]</blue>\n",
+                                                      current_node, current_chunk_type)
 
                     # Handle streaming vs. discrete chunks
                     if chunk.chunk_type in ("spoken", "thought"):
@@ -124,6 +126,7 @@ def _handle_blocking(url: str, payload: dict) -> None:
 
     data = response.json()
     current_node = None
+    current_chunk_type = None
 
     if isinstance(data, list):
         for event in data:
@@ -133,11 +136,13 @@ def _handle_blocking(url: str, payload: dict) -> None:
             chunks = parse_event_chunks(event)
 
             for chunk in chunks:
-                if current_node != chunk.node_name:
+                # Log the node name and chunk type whenever either changes
+                if current_node != chunk.node_name or current_chunk_type != chunk.chunk_type:
                     current_node = chunk.node_name
+                    current_chunk_type = chunk.chunk_type
                     logger.opt(raw=True,
-                               colors=True).debug("\n<blue>[{}]</blue>\n",
-                                                  current_node)
+                               colors=True).debug("\n<blue>[{} | {}]</blue>\n",
+                                                  current_node, current_chunk_type)
 
                 _log_chunk(chunk)
     else:
