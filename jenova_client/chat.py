@@ -52,7 +52,17 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
             name = func_data.get("name", "UnknownTool")
-            result = func_data.get("response", {}).get("result", "")
+            
+            # Grab the raw response object
+            response_data = func_data.get("response", {})
+            
+            # If it's a dictionary, stringify it so we can see all keys (like 'stdout', 'error', etc.)
+            if isinstance(response_data, dict):
+                # Using json.dumps to make it readable in the terminal
+                result = json.dumps(response_data) 
+            else:
+                result = str(response_data)
+                
             text = f"✅ [Tool Result ({name}): {result}] ✅"
             chunks.append(
                 ParsedChunk(node_name, "tool_result", text, is_internal))
