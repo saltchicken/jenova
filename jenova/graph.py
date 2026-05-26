@@ -11,8 +11,8 @@ from google.adk import Event
 from google.adk import Workflow
 from google.adk.models.lite_llm import LiteLlm
 
-from jenova.discovery import create_adk_tool
-from jenova.discovery import discover_adk_agents
+from jenova.utils import create_adk_tool
+from jenova.utils import discover_adk_agents
 from jenova.utils import get_full_history
 
 
@@ -24,7 +24,7 @@ def process_input(node_input: str, ctx: Context) -> Event:
     return Event(state={
         "input": node_input,
         "history": history,
-        "current_date": current_date
+        "system_information": current_date
     })
 
 
@@ -44,6 +44,7 @@ orchestrator = Agent(
     ("You are the central orchestrator agent for the Jenova system. "
      "Your job is to analyze the user's request and delegate it to the appropriate "
      "specialized A2A agent to fulfill the request. \n\n"
+     "System Information: {system_information}\n"
      "User Request: {input}\n"
      "Conversation History: {history?}\n\n"
      "Review your available tools. Determine the best expert to handle this and call them."
