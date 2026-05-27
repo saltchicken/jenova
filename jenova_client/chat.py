@@ -36,36 +36,66 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
     chunks = []
 
     for part in parts:
+        # Handle Standard Text & Thoughts
         if "text" in part:
             chunk_type = "thought" if part.get("thought", False) else "spoken"
             chunks.append(
-                ParsedChunk(node_name, chunk_type, part["text"], is_internal))
+                ParsedChunk(node_name, chunk_type, part["text"], is_internal)
+            )
 
+        # Handle Function Calls
         elif "functionCall" in part:
             func_data = part["functionCall"]
-            name = func_data.get("name", "UnknownTool")
+            name = func_data.get("name", "UnknownFunction")
             args = func_data.get("args", {})
-            text = f"⚡ [Executing Tool: {name} | Args: {args}] ⚡"
-            chunks.append(ParsedChunk(node_name, "tool_call", text,
-                                      is_internal))
+            text = f"⚡ [Executing Function: {name} | Args: {args}] ⚡"
+            chunks.append(ParsedChunk(node_name, "tool_call", text, is_internal))
 
+        # Handle Function Responses
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
-            name = func_data.get("name", "UnknownTool")
+            name = func_data.get("name", "UnknownFunction")
+            result = func_data.get("response", {}).get("result", func_data.get("response", {}))
+            text = f"✅ [Function Result ({name}): {result}] ✅"
+            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
             
-            # Grab the raw response object
-            response_data = func_data.get("response", {})
+        # Handle Tool Calls (Missing in original)
+        elif "toolCall" in part:
+            tool_data = part["toolCall"]
+            tool_type = tool_data.get("toolType", "UnknownTool")
+            args = tool_data.get("args", {})
+            text = f"⚡ [Executing Tool: {tool_type} | Args: {args}] ⚡"
+            chunks.append(ParsedChunk(node_name, "tool_call", text, is_internal))
+
+        # Handle Tool Responses (Missing in original)
+        elif "toolResponse" in part:
+            tool_data = part["toolResponse"]
+            tool_type = tool_data.get("toolType", "UnknownTool")
+            result = tool_data.get("response", {})
+            text = f"✅ [Tool Result ({tool_type}): {result}] ✅"
+            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
+
+        # Handle Executable Code (Missing in original)
+        elif "executableCode" in part:
+            code_data = part["executableCode"]
+            lang = code_data.get("language", "UNKNOWN")
+            code = code_data.get("code", "")
+            text = f"💻 [Writing Code ({lang})]:\n{code}"
+            chunks.append(ParsedChunk(node_name, "thought", text, is_internal))
+
+        # Handle Code Execution Results (Missing in original)
+        elif "codeExecutionResult" in part:
+            exec_data = part["codeExecutionResult"]
+            outcome = exec_data.get("outcome", "UNKNOWN")
+            output = exec_data.get("output", "")
+            text = f"⚙️ [Code Output ({outcome})]:\n{output}"
+            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
             
-            # If it's a dictionary, stringify it so we can see all keys (like 'stdout', 'error', etc.)
-            if isinstance(response_data, dict):
-                # Using json.dumps to make it readable in the terminal
-                result = json.dumps(response_data) 
-            else:
-                result = str(response_data)
-                
-            text = f"✅ [Tool Result ({name}): {result}] ✅"
-            chunks.append(
-                ParsedChunk(node_name, "tool_result", text, is_internal))
+        # Handle File/Inline Data (Missing in original)
+        elif any(k in part for k in ["fileData", "inlineData", "videoMetadata"]):
+            data_type = next(k for k in ["fileData", "inlineData", "videoMetadata"] if k in part)
+            text = f"📎 [Attached Media: {data_type}]"
+            chunks.append(ParsedChunk(node_name, "spoken", text, is_internal))
 
     return chunks
 
