@@ -62,16 +62,17 @@ orchestrator_toolset = skill_toolset.SkillToolset(
 orchestrator = Agent(
     model=llm_client,
     name="orchestrator",
-    instruction=
-    ("You are the central orchestrator agent for the Jenova system. "
-     "Your job is to analyze the user's request and delegate it to the appropriate "
-     "specialized A2A agent to fulfill the request. \n\n"
-     "System Information: {system_information}\n"
-     "User Request: {input}\n"
-     "Conversation History: {history?}\n\n"
-     "Review your available tools. Determine the best expert to handle this and call them."
+    instruction=(
+        "You are the central orchestrator agent for the Jenova system. "
+        "Your job is to analyze the user's request and delegate it to the appropriate "
+        "specialized A2A agent to fulfill the request. \n\n"
+        "System Information: {system_information}\n"
+        "User Request: {input}\n"
+        "Conversation History: {history?}\n\n"
+        "Review your available tools and call the best expert. "
+        "CRITICAL: Once you have successfully retrieved the information from a tool, "
+        "you MUST stop calling tools immediately and output the final answer to the user."
     ),
-    # 4. Pass the combined toolset to the agent
     tools=[orchestrator_toolset, get_wind_speed] + dynamic_tools
 )
 
