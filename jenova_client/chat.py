@@ -40,8 +40,7 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
         if "text" in part:
             chunk_type = "thought" if part.get("thought", False) else "spoken"
             chunks.append(
-                ParsedChunk(node_name, chunk_type, part["text"], is_internal)
-            )
+                ParsedChunk(node_name, chunk_type, part["text"], is_internal))
 
         # Handle Function Calls
         elif "functionCall" in part:
@@ -49,23 +48,28 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
             name = func_data.get("name", "UnknownFunction")
             args = func_data.get("args", {})
             text = f"⚡ [Executing Function: {name} | Args: {args}] ⚡"
-            chunks.append(ParsedChunk(node_name, "tool_call", text, is_internal))
+            chunks.append(ParsedChunk(node_name, "tool_call", text,
+                                      is_internal))
 
         # Handle Function Responses
         elif "functionResponse" in part:
             func_data = part["functionResponse"]
             name = func_data.get("name", "UnknownFunction")
-            result = func_data.get("response", {}).get("result", func_data.get("response", {}))
+            result = func_data.get("response",
+                                   {}).get("result",
+                                           func_data.get("response", {}))
             text = f"✅ [Function Result ({name}): {result}] ✅"
-            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
-            
+            chunks.append(
+                ParsedChunk(node_name, "tool_result", text, is_internal))
+
         # Handle Tool Calls (Missing in original)
         elif "toolCall" in part:
             tool_data = part["toolCall"]
             tool_type = tool_data.get("toolType", "UnknownTool")
             args = tool_data.get("args", {})
             text = f"⚡ [Executing Tool: {tool_type} | Args: {args}] ⚡"
-            chunks.append(ParsedChunk(node_name, "tool_call", text, is_internal))
+            chunks.append(ParsedChunk(node_name, "tool_call", text,
+                                      is_internal))
 
         # Handle Tool Responses (Missing in original)
         elif "toolResponse" in part:
@@ -73,7 +77,8 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
             tool_type = tool_data.get("toolType", "UnknownTool")
             result = tool_data.get("response", {})
             text = f"✅ [Tool Result ({tool_type}): {result}] ✅"
-            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
+            chunks.append(
+                ParsedChunk(node_name, "tool_result", text, is_internal))
 
         # Handle Executable Code (Missing in original)
         elif "executableCode" in part:
@@ -89,11 +94,15 @@ def parse_event_chunks(event_data: dict) -> list[ParsedChunk]:
             outcome = exec_data.get("outcome", "UNKNOWN")
             output = exec_data.get("output", "")
             text = f"⚙️ [Code Output ({outcome})]:\n{output}"
-            chunks.append(ParsedChunk(node_name, "tool_result", text, is_internal))
-            
+            chunks.append(
+                ParsedChunk(node_name, "tool_result", text, is_internal))
+
         # Handle File/Inline Data (Missing in original)
-        elif any(k in part for k in ["fileData", "inlineData", "videoMetadata"]):
-            data_type = next(k for k in ["fileData", "inlineData", "videoMetadata"] if k in part)
+        elif any(
+                k in part for k in ["fileData", "inlineData", "videoMetadata"]):
+            data_type = next(
+                k for k in ["fileData", "inlineData", "videoMetadata"]
+                if k in part)
             text = f"📎 [Attached Media: {data_type}]"
             chunks.append(ParsedChunk(node_name, "spoken", text, is_internal))
 
