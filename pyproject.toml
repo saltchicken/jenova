@@ -16,6 +16,7 @@ dependencies = [
     "ddgs",
     "beautifulsoup4",
     "requests",
+    "python-dotenv"
 ]
 
 [project.optional-dependencies]

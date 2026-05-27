@@ -2,15 +2,17 @@
 Defines the main agent workflow graph and routing logic.
 """
 
+import os
 import pathlib
 from datetime import datetime
 from typing import Any
 
-from google.adk import Agent
 from google.adk import Context
 from google.adk import Event
 from google.adk import Workflow
 from google.adk.models.lite_llm import LiteLlm
+from google.adk.models.google_llm import Gemini
+from google.adk.agents import LlmAgent
 
 # ADK Skill Modules
 from google.adk.skills import load_skill_from_dir
@@ -20,6 +22,8 @@ from google.adk.code_executors.unsafe_local_code_executor import UnsafeLocalCode
 from jenova.utils import create_adk_tool
 from jenova.utils import discover_adk_agents
 from jenova.utils import get_full_history
+
+from dotenv import load_dotenv
 
 
 def process_input(node_input: str, ctx: Context) -> Event:
@@ -33,9 +37,29 @@ def process_input(node_input: str, ctx: Context) -> Event:
         "system_information": current_date
     })
 
+### LOAD LOCAL MODEL ###
+# llm_client = LiteLlm(model="ollama_chat/gemma4:e4b")
 
-DEFAULT_MODEL = "ollama_chat/gemma4:e4b"
-llm_client = LiteLlm(model=DEFAULT_MODEL)
+
+### LOAD GEMINI VIA API ###
+
+load_dotenv()
+
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+MODEL_NAME = "gemini-2.5-flash"
+
+if not PROJECT_ID:
+    raise ValueError("GOOGLE_CLOUD_PROJECT is not set in your .env file!")
+
+# Dynamically build the fully qualified Vertex AI model string
+VERTEX_MODEL_PATH = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL_NAME}"
+
+# Initialize the client
+llm_client = Gemini(model=VERTEX_MODEL_PATH)
+
+
+
 
 # 1. Discover your A2A agents
 discovered_cards = discover_adk_agents()
@@ -59,7 +83,7 @@ orchestrator_toolset = skill_toolset.SkillToolset(
 )
 
 
-orchestrator = Agent(
+orchestrator = LlmAgent(
     model=llm_client,
     name="orchestrator",
     instruction=(
