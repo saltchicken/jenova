@@ -7,6 +7,7 @@ import uuid
 from google.adk import Context
 import httpx
 from loguru import logger
+import json
 
 
 def get_full_history(ctx: Context, max_messages: int = 10) -> list[dict]:
@@ -63,22 +64,25 @@ def discover_adk_agents(start_port: int = 8000,
     return active_cards
 
 
+
 def create_adk_tool(card: dict):
     """
     Dynamically generates a callable function from an ADK Agent Card 
     using the A2A JSON-RPC Protocol (v0.3.0).
     """
     agent_name = card.get("name", "UnknownAgent")
-    # Clean the name so it's a valid Python function name
     safe_name = agent_name.replace(" ", "_").lower()
-
-    # Extract the base URL from the agent card
     target_url = card.get("url", "http://localhost:8000")
 
-    def dynamic_caller(query: str) -> str:
+    # 1. Accept a single explicitly typed dictionary. 
+    # This prevents the framework from stripping arbitrary arguments.
+    def dynamic_caller(parameters: dict) -> str:
         logger.debug(
-            f"[Orchestrator is calling {agent_name} via A2A with task: '{query}']..."
+            f"[Orchestrator is calling {agent_name} via A2A with params: {parameters}]..."
         )
+
+        # 2. Serialize the dictionary for the remote LLM to read
+        task_content = f"Execute task with the following parameters:\n{json.dumps(parameters, indent=2)}"
 
         # Construct the strict A2A Protocol JSON-RPC Payload
         payload = {
@@ -93,14 +97,13 @@ def create_adk_tool(card: dict):
                     "role": "user",
                     "parts": [{
                         "kind": "text",
-                        "text": query
+                        "text": task_content
                     }]
                 }
             }
         }
 
         try:
-            # Note: 120s timeout, as A2A agent research tasks can be slow
             response = httpx.post(target_url, json=payload, timeout=120.0)
             response.raise_for_status()
             data = response.json()
@@ -111,7 +114,6 @@ def create_adk_tool(card: dict):
             result_data = data.get("result", {})
             parts = []
 
-            # Your robust parsing logic to handle different A2A response shapes
             if "artifacts" in result_data and result_data["artifacts"]:
                 parts = result_data["artifacts"][0].get("parts", [])
             elif "history" in result_data and result_data["history"]:
@@ -121,7 +123,6 @@ def create_adk_tool(card: dict):
             else:
                 parts = result_data.get("parts", [])
 
-            # Extract text, specifically ignoring internal "adk_thought" processes
             final_answer = "".join(
                 part.get("text", "") for part in parts if "text" in part and
                 not part.get("metadata", {}).get("adk_thought"))
@@ -133,17 +134,24 @@ def create_adk_tool(card: dict):
             return f"A2A System Error contacting {agent_name}: {exc}"
 
     # --- CRITICAL: Inject Metadata for the LLM ---
-    # Set the function name for the LLM schema
     dynamic_caller.__name__ = f"call_{safe_name}"
 
-    # Extract the primary skill description to act as the tool's docstring
+    # 3. Update the docstring so the LLM knows it should pass a dictionary
     skills = card.get("skills", [])
-    if skills and len(skills) > 0 and "description" in skills[0]:
-        dynamic_caller.__doc__ = (
-            f"Passes a query to the {agent_name}. "
-            f"Agent Description: {skills[0]['description']}")
-    else:
-        dynamic_caller.__doc__ = card.get("description",
-                                          "Calls a remote A2A JSON-RPC agent.")
+    
+    # Try to grab the parameter schema from the agent card to pass to the orchestrator
+    schema_str = ""
+    if skills and "parameters" in skills[0]:
+        schema_str = f"Accepted arguments schema: {json.dumps(skills[0]['parameters'])}\n"
+    
+    base_desc = (skills[0]['description'] if skills and "description" in skills[0] 
+                 else "Calls a remote A2A JSON-RPC agent.")
+    
+    dynamic_caller.__doc__ = (
+        f"Passes instructions to the {agent_name}. Agent Description: {base_desc}\n\n"
+        f"{schema_str}"
+        f"Args:\n"
+        f"    parameters: A dictionary containing all necessary arguments. Strictly adhere to the accepted arguments schema if provided."
+    )
 
     return dynamic_caller

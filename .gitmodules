@@ -1,0 +1,3 @@
+[submodule "a2a_agents/search_agent"]
+	path = a2a_agents/search_agent
+	url = https://github.com/saltchicken/search_agent
