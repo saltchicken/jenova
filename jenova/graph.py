@@ -23,6 +23,8 @@ from jenova.utils import create_adk_tool
 from jenova.utils import discover_adk_agents
 from jenova.utils import get_full_history
 
+from jenova.tools import get_wind_speed
+
 
 def process_input(node_input: str, ctx: Context) -> Event:
     """Processes the input string and provides context to the orchestrator."""
@@ -62,12 +64,6 @@ dynamic_tools: list[Any] = [create_adk_tool(card) for card in discovered_cards]
 # 2. Load your directory-based Skill from the filesystem (using kebab-case)
 system_diagnostics_skill = load_skill_from_dir(
     pathlib.Path(__file__).parent / "skills" / "system-diagnostics")
-
-
-# TODO: Remove this. Was just a test
-def get_wind_speed(location: str) -> str:
-    """Returns the current wind speed for a given location."""
-    return f"The wind speed in {location} is 10 mph."
 
 
 # 3. Combine the local Skill, the dynamic A2A tools, and the code executor
