@@ -19,11 +19,10 @@ from google.adk.models.lite_llm import LiteLlm
 from google.adk.skills import load_skill_from_dir
 from google.adk.tools import skill_toolset
 
+from jenova.tools import get_wind_speed
 from jenova.utils import create_adk_tool
 from jenova.utils import discover_adk_agents
 from jenova.utils import get_full_history
-
-from jenova.tools import get_wind_speed
 
 
 def process_input(node_input: str, ctx: Context) -> Event:
@@ -37,9 +36,10 @@ def process_input(node_input: str, ctx: Context) -> Event:
         "system_information": current_date
     })
 
+
 def _initialize_llm(local: bool = True):
     if local:
-        return LiteLlm(model="ollama_chat/gemma4:e4b") 
+        return LiteLlm(model="ollama_chat/gemma4:e4b")
     else:
         load_dotenv()
 
@@ -48,7 +48,8 @@ def _initialize_llm(local: bool = True):
         MODEL_NAME = "gemini-2.5-flash"
 
         if not PROJECT_ID:
-            raise ValueError("GOOGLE_CLOUD_PROJECT is not set in your .env file!")
+            raise ValueError(
+                "GOOGLE_CLOUD_PROJECT is not set in your .env file!")
 
         # Dynamically build the fully qualified Vertex AI model string
         VERTEX_MODEL_PATH = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL_NAME}"
@@ -64,7 +65,6 @@ dynamic_tools: list[Any] = [create_adk_tool(card) for card in discovered_cards]
 # 2. Load your directory-based Skill from the filesystem (using kebab-case)
 system_diagnostics_skill = load_skill_from_dir(
     pathlib.Path(__file__).parent / "skills" / "system-diagnostics")
-
 
 # 3. Combine the local Skill, the dynamic A2A tools, and the code executor
 orchestrator_toolset = skill_toolset.SkillToolset(
