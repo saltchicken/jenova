@@ -35,26 +35,25 @@ def process_input(node_input: str, ctx: Context) -> Event:
         "system_information": current_date
     })
 
+def _initialize_llm(local: bool = True):
+    if local:
+        return LiteLlm(model="ollama_chat/gemma4:e4b") 
+    else:
+        load_dotenv()
 
-### LOAD LOCAL MODEL ###
-# llm_client = LiteLlm(model="ollama_chat/gemma4:e4b")
+        PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+        LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+        MODEL_NAME = "gemini-2.5-flash"
 
-### LOAD GEMINI VIA API ###
+        if not PROJECT_ID:
+            raise ValueError("GOOGLE_CLOUD_PROJECT is not set in your .env file!")
 
-load_dotenv()
+        # Dynamically build the fully qualified Vertex AI model string
+        VERTEX_MODEL_PATH = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL_NAME}"
 
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
-LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-MODEL_NAME = "gemini-2.5-flash"
+        # Initialize the client
+        return Gemini(model=VERTEX_MODEL_PATH)
 
-if not PROJECT_ID:
-    raise ValueError("GOOGLE_CLOUD_PROJECT is not set in your .env file!")
-
-# Dynamically build the fully qualified Vertex AI model string
-VERTEX_MODEL_PATH = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL_NAME}"
-
-# Initialize the client
-llm_client = Gemini(model=VERTEX_MODEL_PATH)
 
 # 1. Discover your A2A agents
 discovered_cards = discover_adk_agents()
@@ -78,7 +77,7 @@ orchestrator_toolset = skill_toolset.SkillToolset(
 )
 
 orchestrator = LlmAgent(
-    model=llm_client,
+    model=_initialize_llm(local=True),
     name="orchestrator",
     instruction=
     ("You are the central orchestrator agent for the Jenova system. "
