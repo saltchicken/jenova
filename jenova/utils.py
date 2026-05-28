@@ -134,24 +134,31 @@ def create_adk_tool(card: dict):
             return f"A2A System Error contacting {agent_name}: {exc}"
 
     # --- CRITICAL: Inject Metadata for the LLM ---
+# --- CRITICAL: Inject Metadata for the LLM ---
     dynamic_caller.__name__ = f"call_{safe_name}"
 
-    # 3. Update the docstring so the LLM knows it should pass a dictionary
     skills = card.get("skills", [])
     
-    # Try to grab the parameter schema from the agent card to pass to the orchestrator
-    schema_str = ""
-    if skills and "parameters" in skills[0]:
-        schema_str = f"Accepted arguments schema: {json.dumps(skills[0]['parameters'])}\n"
+    # 1. Grab the base agent description (usually at index 0)
+    base_desc = (skills[0].get('description', 'Calls a remote A2A JSON-RPC agent.') 
+                 if skills else 'Calls a remote A2A JSON-RPC agent.')
     
-    base_desc = (skills[0]['description'] if skills and "description" in skills[0] 
-                 else "Calls a remote A2A JSON-RPC agent.")
-    
+    # 2. Extract the sub-tools and their rules to pass to the orchestrator
+    sub_tools_info = ""
+    if len(skills) > 1:
+        sub_tools_info = "\nThe remote agent has access to these sub-tools:\n"
+        for skill in skills[1:]:
+            tool_name = skill.get('name', 'UnknownTool')
+            tool_desc = skill.get('description', '')
+            sub_tools_info += f"- {tool_name}: {tool_desc}\n"
+
+    # 3. Update the docstring with the full context
     dynamic_caller.__doc__ = (
-        f"Passes instructions to the {agent_name}. Agent Description: {base_desc}\n\n"
-        f"{schema_str}"
+        f"Passes instructions to the {agent_name}. Agent Description: {base_desc}\n"
+        f"{sub_tools_info}\n"
         f"Args:\n"
-        f"    parameters: A dictionary containing all necessary arguments. Strictly adhere to the accepted arguments schema if provided."
+        f"    parameters: A dictionary containing all necessary arguments to instruct the agent. "
+        f"Strictly adhere to the acceptable values and rules described in the agent's sub-tools."
     )
 
     return dynamic_caller
