@@ -46,6 +46,7 @@ def _initialize_llm(local: bool = True):
         PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
         LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
         MODEL_NAME = "gemini-2.5-flash"
+        # MODEL_NAME = "gemini-2.5-pro"
 
         if not PROJECT_ID:
             raise ValueError(
