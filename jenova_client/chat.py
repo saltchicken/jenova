@@ -128,10 +128,11 @@ def _log_chunk(chunk: ParsedChunk) -> None:
                                                 chunk.text)
 
 
-def _handle_streaming(url: str, payload: dict) -> None:
-    """Handles a streaming chat request."""
+def _handle_streaming(url: str, payload: dict) -> str:
+    """Handles a streaming chat request and returns the collected TTS text."""
     current_node = None
     current_chunk_type = None
+    tts_collection = []
 
     with httpx.Client() as client:
         with connect_sse(client, "POST", url, json=payload,
@@ -147,6 +148,11 @@ def _handle_streaming(url: str, payload: dict) -> None:
                 chunks = parse_event_chunks(data)
 
                 for chunk in chunks:
+                    # Capture the complete, non-internal spoken text for TTS
+                    # before the logging logic skips it
+                    if chunk.chunk_type == "spoken" and not chunk.is_internal and not is_partial:
+                        tts_collection.append(chunk.text)
+
                     if chunk.chunk_type in ("spoken",
                                             "thought") and not is_partial:
                         continue
@@ -170,16 +176,19 @@ def _handle_streaming(url: str, payload: dict) -> None:
                         # Tools are discrete events and typically do not carry the partial flag
                         if not is_partial:
                             _log_chunk(chunk)
+                            
+    return " ".join(tts_collection).strip()
 
 
-def _handle_blocking(url: str, payload: dict) -> None:
-    """Handles a blocking chat request."""
+def _handle_blocking(url: str, payload: dict) -> str:
+    """Handles a blocking chat request and returns the collected TTS text."""
     response = httpx.post(url, json=payload, timeout=None)
     response.raise_for_status()
 
     data = response.json()
     current_node = None
     current_chunk_type = None
+    tts_collection = []
 
     if isinstance(data, list):
         for event in data:
@@ -199,13 +208,19 @@ def _handle_blocking(url: str, payload: dict) -> None:
                                                   current_chunk_type)
 
                 _log_chunk(chunk)
+                
+                # Capture the non-internal spoken text for TTS
+                if chunk.chunk_type == "spoken" and not chunk.is_internal:
+                    tts_collection.append(chunk.text)
     else:
         logger.warning(f"Unexpected response format: {data}")
+        
+    return " ".join(tts_collection).strip()
 
 
 def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
-         user_id: str):
-    """Sends a chat message to the agent."""
+         user_id: str) -> str:
+    """Sends a chat message to the agent and returns the spoken text."""
     endpoint = "/run" if is_blocking else "/run_sse"
     url = f"{base_url}{endpoint}"
 
@@ -224,9 +239,9 @@ def chat(user_input: str, is_blocking: bool, session_id: str, base_url: str,
 
     try:
         if not is_blocking:
-            _handle_streaming(url, payload)
+            return _handle_streaming(url, payload)
         else:
-            _handle_blocking(url, payload)
+            return _handle_blocking(url, payload)
     except httpx.RequestError as exc:
         logger.error(f"Unable to connect to server: {exc}")
         sys.exit(1)

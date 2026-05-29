@@ -14,6 +14,18 @@ from jenova_client.constants import DEFAULT_BASE_URL
 from jenova_client.constants import DEFAULT_USER_ID
 from jenova_client.session import SessionManager
 
+from qwen3_tts_client import Qwen3TTSClient
+import time
+
+client = Qwen3TTSClient(
+    server_url="http://localhost:8123/tts", 
+    voice="glow_ref",  # Name of a .pt or .wav file inside your server's /refs folder
+    temp=0.9
+)
+
+client.start()
+
+
 
 def main():
     """Main entry point for the client application."""
@@ -92,11 +104,14 @@ def main():
             )
             sys.exit(1)
 
-        chat(user_input=args.prompt,
+        tts_text = chat(user_input=args.prompt,
              is_blocking=args.blocking,
              session_id=args.session_id,
              base_url=args.url,
              user_id=args.user_id)
+
+        client.speak(tts_text)
+        client.wait_until_done()
 
 
 if __name__ == "__main__":
